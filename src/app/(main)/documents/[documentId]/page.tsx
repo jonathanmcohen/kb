@@ -1,12 +1,14 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { Editor } from "@/components/editor/editor";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { Editor } from "@/components/editor/editor";
+import { IconPicker } from "@/components/icon-picker";
+import { CoverImagePicker } from "@/components/cover-image-picker";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ImageIcon, Smile } from "lucide-react";
 
 interface Document {
     id: string;
@@ -39,40 +41,38 @@ export default function DocumentPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data),
             });
-            if (!res.ok) throw new Error("Failed to update document");
+            if (!res.ok) throw new Error("Failed to update");
             return res.json();
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["document", documentId] });
-            queryClient.invalidateQueries({ queryKey: ["documents"] });
         },
     });
 
-    const handleTitleChange = (value: string) => {
-        setTitle(value);
-        updateMutation.mutate({ title: value });
-    };
-
-    const handleContentChange = (content: string) => {
-        updateMutation.mutate({ content });
-    };
-
-    const handleAddIcon = () => {
-        const emoji = prompt('Enter an emoji for this page:');
-        if (emoji) {
-            updateMutation.mutate({ icon: emoji });
-        }
-    };
-
-    const handleAddCover = async () => {
-        const url = prompt('Enter image URL for cover:');
-        if (url) {
-            updateMutation.mutate({ coverImage: url });
-        }
+    const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newTitle = e.target.value;
+        setTitle(newTitle);
+        updateMutation.mutate({ title: newTitle });
     };
 
     const handleContentChangeWrapper = (content: string) => {
         updateMutation.mutate({ content });
+    };
+
+    const handleIconChange = (icon: string) => {
+        updateMutation.mutate({ icon });
+    };
+
+    const handleCoverChange = (coverImage: string) => {
+        updateMutation.mutate({ coverImage });
+    };
+
+    const handleRemoveCover = () => {
+        updateMutation.mutate({ coverImage: null });
+    };
+
+    const handleRemoveIcon = () => {
+        updateMutation.mutate({ icon: null });
     };
 
     if (!document) {
@@ -84,50 +84,70 @@ export default function DocumentPage() {
     }
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="h-full overflow-y-auto">
+            {/* Cover Image */}
             {document.coverImage && (
-                <div className="h-48 w-full relative bg-muted">
-                    {/* Cover image would go here */}
+                <div className="h-[40vh] w-full relative group">
+                    <img
+                        src={document.coverImage}
+                        alt="Cover"
+                        className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleRemoveCover}
+                        >
+                            <X className="h-4 w-4 mr-2" />
+                            Remove cover
+                        </Button>
+                    </div>
                 </div>
             )}
-            <div className="flex-1 overflow-y-auto">
-                <div className="max-w-3xl mx-auto px-12 py-8">
-                    <div className="group flex items-center gap-2 mb-4">
-                        {document.icon && <span className="text-5xl">{document.icon}</span>}
-                        {!document.icon && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="opacity-0 group-hover:opacity-100"
-                                onClick={handleAddIcon}
-                            >
-                                <Smile className="h-4 w-4 mr-2" />
-                                Add icon
-                            </Button>
-                        )}
-                        {!document.coverImage && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="opacity-0 group-hover:opacity-100"
-                                onClick={handleAddCover}
-                            >
-                                <ImageIcon className="h-4 w-4 mr-2" />
-                                Add cover
-                            </Button>
-                        )}
-                    </div>
-                    <Input
-                        value={title}
-                        onChange={(e) => handleTitleChange(e.target.value)}
-                        className="text-4xl font-bold border-none focus-visible:ring-0 px-0 mb-4"
-                        placeholder="Untitled"
-                    />
-                    <Editor
-                        onChange={handleContentChangeWrapper}
-                        initialContent={document.content ? JSON.stringify(document.content) : undefined}
-                    />
+
+            <div className="max-w-3xl mx-auto px-12 py-8">
+                {/* Icon and Cover Controls */}
+                <div className="flex items-center gap-2 mb-8">
+                    <IconPicker currentIcon={document.icon} onIconChange={handleIconChange}>
+                        <Button variant="ghost" size="sm">
+                            {document.icon ? (
+                                <span className="text-5xl">{document.icon}</span>
+                            ) : (
+                                <span className="text-muted-foreground text-sm">🙂 Add icon</span>
+                            )}
+                        </Button>
+                    </IconPicker>
+
+                    {document.icon && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRemoveIcon}
+                            className="text-muted-foreground hover:text-destructive"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+
+                    {!document.coverImage && (
+                        <CoverImagePicker onCoverChange={handleCoverChange} />
+                    )}
                 </div>
+
+                {/* Title */}
+                <Input
+                    value={title}
+                    onChange={handleTitleChange}
+                    className="text-5xl font-bold border-none px-0 focus-visible:ring-0 mb-4"
+                    placeholder="Untitled"
+                />
+
+                {/* Editor */}
+                <Editor
+                    onChange={handleContentChangeWrapper}
+                    initialContent={document.content ? JSON.stringify(document.content) : undefined}
+                />
             </div>
         </div>
     );

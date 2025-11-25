@@ -5,6 +5,7 @@ import { FileText, Plus, Trash2, ChevronRight, ChevronDown } from "lucide-react"
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { IconPicker } from "@/components/icon-picker";
 
 interface Document {
     id: string;
@@ -59,6 +60,21 @@ export function Sidebar() {
         },
     });
 
+    const updateIconMutation = useMutation({
+        mutationFn: async ({ id, icon }: { id: string; icon: string }) => {
+            const res = await fetch(`/api/documents/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ icon }),
+            });
+            if (!res.ok) throw new Error("Failed to update icon");
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["documents"] });
+        },
+    });
+
     const toggleExpanded = (id: string) => {
         const newExpanded = new Set(expandedIds);
         if (newExpanded.has(id)) {
@@ -102,11 +118,21 @@ export function Sidebar() {
                         className="flex items-center gap-2 flex-1 min-w-0"
                         onClick={() => router.push(`/documents/${doc.id}`)}
                     >
-                        {doc.icon ? (
-                            <span className="text-lg">{doc.icon}</span>
-                        ) : (
-                            <FileText className="h-4 w-4 shrink-0" />
-                        )}
+                        <IconPicker
+                            currentIcon={doc.icon}
+                            onIconChange={(icon) => updateIconMutation.mutate({ id: doc.id, icon })}
+                        >
+                            <button
+                                className="hover:bg-accent/50 rounded px-1"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {doc.icon ? (
+                                    <span className="text-lg">{doc.icon}</span>
+                                ) : (
+                                    <FileText className="h-4 w-4 shrink-0" />
+                                )}
+                            </button>
+                        </IconPicker>
                         <span className="truncate text-sm">{doc.title}</span>
                     </div>
                     <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1">
