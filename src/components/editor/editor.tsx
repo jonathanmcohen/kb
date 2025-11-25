@@ -53,14 +53,16 @@ export function Editor({ onChange, initialContent, editable = true }: EditorProp
         },
     });
 
-    // Cleanup timeout on unmount
+    // Cleanup timeout on unmount and flush pending changes
     useEffect(() => {
         return () => {
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
+                // Flush pending changes immediately on unmount
+                onChange(JSON.stringify(editor.document));
             }
         };
-    }, []);
+    }, [editor, onChange]);
 
     return (
         <div className="prose dark:prose-invert max-w-none">

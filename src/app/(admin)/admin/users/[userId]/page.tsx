@@ -14,8 +14,9 @@ export const dynamic = "force-dynamic";
 export default async function AdminUserPage({
     params,
 }: {
-    params: { userId: string };
+    params: Promise<{ userId: string }>;
 }) {
+    const { userId } = await params;
     const session = await auth();
 
     if (!session?.user?.id) {
@@ -33,7 +34,7 @@ export default async function AdminUserPage({
     }
 
     const user = await prisma.user.findUnique({
-        where: { id: params.userId },
+        where: { id: userId },
         include: {
             _count: {
                 select: {
