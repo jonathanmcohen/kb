@@ -1,36 +1,212 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Knowledge Base Application
 
-## Getting Started
+A Notion-like knowledge base with block-based editing, real-time collaboration, and robust authentication.
 
-First, run the development server:
+## Features
+
+- ✅ **Block-Based Editor**: Powered by BlockNote with support for various block types
+- ✅ **Hierarchical Documents**: Nested pages with sidebar navigation
+- ✅ **Authentication**: Local (email/password) and OIDC (Google, GitHub)
+- ✅ **Light/Dark Mode**: System-aware theme support
+- ✅ **Document Management**: Create, edit, delete, and archive documents
+- ✅ **Search**: Global search across all documents
+- ✅ **Admin Portal**: Dashboard with metrics and user management
+- 🚧 **S3 Uploads**: Image and file upload support (API ready)
+- 🚧 **External API**: REST API with token authentication (structure ready)
+- ✅ **Docker**: Containerized deployment with GitHub Actions CI/CD
+
+## Tech Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Database**: PostgreSQL
+- **ORM**: Prisma
+- **Authentication**: NextAuth.js v5
+- **Editor**: BlockNote
+- **UI**: shadcn/ui + Tailwind CSS
+- **State Management**: TanStack Query + Zustand
+
+## Prerequisites
+
+- Node.js 20+
+- PostgreSQL (or Docker to run it)
+- npm
+
+## Setup Instructions
+
+### 1. Clone and Install
+
+```bash
+cd kb
+npm install
+```
+
+### 2. Environment Variables
+
+The `.env` file has been created with default values. Update the following for production:
+
+```env
+DATABASE_URL="postgresql://postgres:password@localhost:5432/kb?schema=public"
+NEXTAUTH_SECRET="<generate-a-secure-random-string>"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Optional: Add OAuth providers
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+GITHUB_ID="your-github-id"
+GITHUB_SECRET="your-github-secret"
+```
+
+### 3. Start Database
+
+#### Option A: Using Docker
+```bash
+docker compose up -d
+```
+
+#### Option B: Local PostgreSQL
+Ensure PostgreSQL is running and create a database named `kb`.
+
+### 4. Run Migrations
+
+```bash
+npx prisma migrate dev
+```
+
+### 5. Start Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Docker Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Build Image
 
-## Learn More
+```bash
+docker build -t kb-app .
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Run with Docker Compose
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+docker compose up
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## CI/CD
 
-## Deploy on Vercel
+GitHub Actions workflow (`.github/workflows/ci.yml`) automatically:
+- Builds the Docker image on push to `main`
+- Pushes to GitHub Container Registry (ghcr.io)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+To use:
+1. Enable GitHub Actions in your repository
+2. The workflow will run automatically on push
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Structure
+
+```
+kb/
+├── app/
+│   ├── (auth)/                 # Authentication pages
+│   │   ├── login/
+│   │   └── signup/
+│   ├── (main)/                 # Main application
+│   │   ├── documents/          # Document pages
+│   │   └── admin/              # Admin dashboard
+│   └── api/                    # API routes
+│       ├── auth/
+│       ├── documents/
+│       └── search/
+├── components/
+│   ├── editor/                 # BlockNote editor
+│   ├── sidebar/                # Navigation sidebar
+│   ├── ui/                     # shadcn components
+│   └── providers/              # Theme & Query providers
+├── lib/
+│   ├── auth.ts                 # NextAuth config
+│   ├── auth.config.ts          # Auth middleware config
+│   └── prisma.ts               # Prisma client
+├── prisma/
+│   └── schema.prisma           # Database schema
+├── docker-compose.yml
+├── Dockerfile
+└── .github/workflows/ci.yml
+```
+
+## Database Schema
+
+- **User**: User accounts with local and OAuth support
+- **Account**: OAuth account linking
+- **Session**: User sessions
+- **Document**: Documents with hierarchy support
+- **Comment**: Comments on documents
+
+## API Routes
+
+### Documents
+- `GET /api/documents` - List all documents
+- `POST /api/documents` - Create document
+- `GET /api/documents/[id]` - Get document
+- `PATCH /api/documents/[id]` - Update document
+- `DELETE /api/documents/[id]` - Delete document
+
+### Search
+- `GET /api/search?q=query` - Search documents
+
+### Authentication
+- `POST /api/auth/signup` - Create account
+- NextAuth.js handles `/api/auth/*` routes
+
+## Development Notes
+
+### OAuth Setup
+
+To enable Google/GitHub login:
+
+1. **Google**: [Create OAuth credentials](https://console.cloud.google.com/apis/credentials)
+2. **GitHub**: [Create OAuth app](https://github.com/settings/developers)
+3. Add environment variables to `.env`
+
+### Prisma Commands
+
+```bash
+# Generate client
+npx prisma generate
+
+# Run migrations
+npx prisma migrate dev
+
+# Open Prisma Studio
+npx prisma studio
+
+# Reset database
+npx prisma migrate reset
+```
+
+## Troubleshooting
+
+### Database Connection Issues
+- Ensure PostgreSQL is running
+- Check `DATABASE_URL` in `.env`
+- Verify credentials and database exists
+
+### Build Errors
+- Clear `.next` folder: `rm -rf .next`
+- Reinstall dependencies: `rm -rf node_modules && npm install`
+- Regenerate Prisma client: `npx prisma generate`
+
+## Roadmap
+
+- [ ] Full-text search with PostgreSQL
+- [ ] Real-time collaboration with WebSockets
+- [ ] S3 integration for file uploads
+- [ ] External API with token authentication
+- [ ] Page history and versioning
+- [ ] Export to Markdown/PDF
+- [ ] Mobile responsive improvements
+
+## License
+
+MIT
