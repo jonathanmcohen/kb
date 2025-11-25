@@ -145,7 +145,7 @@ export function Sidebar() {
         <div className="h-full flex flex-col bg-secondary/30">
             <div className="p-4 border-b">
                 <Button
-                    onClick={() => createMutation.mutate()}
+                    onClick={() => createMutation.mutate(undefined)}
                     className="w-full"
                     variant="outline"
                 >

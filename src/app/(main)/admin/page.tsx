@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FileText, Database } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
+
 export default async function AdminPage() {
     const session = await auth();
 

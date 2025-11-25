@@ -15,7 +15,7 @@ const updateSchema = z.object({
 // GET single document
 export async function GET(
     req: NextRequest,
-    { params }: { params: { documentId: string } }
+    { params }: { params: Promise<{ documentId: string }> }
 ) {
     try {
         const session = await auth();
@@ -23,8 +23,9 @@ export async function GET(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        const { documentId } = await params;
         const document = await prisma.document.findUnique({
-            where: { id: params.documentId },
+            where: { id: documentId },
         });
 
         if (!document) {
@@ -47,7 +48,7 @@ export async function GET(
 // PATCH update document
 export async function PATCH(
     req: NextRequest,
-    { params }: { params: { documentId: string } }
+    { params }: { params: Promise<{ documentId: string }> }
 ) {
     try {
         const session = await auth();
@@ -58,8 +59,9 @@ export async function PATCH(
         const body = await req.json();
         const data = updateSchema.parse(body);
 
+        const { documentId } = await params;
         const document = await prisma.document.findUnique({
-            where: { id: params.documentId },
+            where: { id: documentId },
         });
 
         if (!document || document.userId !== session.user.id) {
@@ -67,7 +69,7 @@ export async function PATCH(
         }
 
         const updated = await prisma.document.update({
-            where: { id: params.documentId },
+            where: { id: documentId },
             data,
         });
 
@@ -83,7 +85,7 @@ export async function PATCH(
 // DELETE document
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { documentId: string } }
+    { params }: { params: Promise<{ documentId: string }> }
 ) {
     try {
         const session = await auth();
@@ -91,8 +93,9 @@ export async function DELETE(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        const { documentId } = await params;
         const document = await prisma.document.findUnique({
-            where: { id: params.documentId },
+            where: { id: documentId },
         });
 
         if (!document || document.userId !== session.user.id) {
@@ -100,7 +103,7 @@ export async function DELETE(
         }
 
         await prisma.document.delete({
-            where: { id: params.documentId },
+            where: { id: documentId },
         });
 
         return NextResponse.json({ success: true });

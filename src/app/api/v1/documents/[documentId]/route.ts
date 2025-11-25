@@ -20,7 +20,7 @@ const updateSchema = z.object({
 // GET /api/v1/documents/[id]
 export async function GET(
     req: NextRequest,
-    { params }: { params: { documentId: string } }
+    { params }: { params: Promise<{ documentId: string }> }
 ) {
     const userId = await verifyApiKey(req);
     if (!userId) {
@@ -28,8 +28,9 @@ export async function GET(
     }
 
     try {
+        const { documentId } = await params;
         const document = await prisma.document.findUnique({
-            where: { id: params.documentId },
+            where: { id: documentId },
         });
 
         if (!document || (document.userId !== userId && !document.isPublished)) {
@@ -48,7 +49,7 @@ export async function GET(
 // PATCH /api/v1/documents/[id]
 export async function PATCH(
     req: NextRequest,
-    { params }: { params: { documentId: string } }
+    { params }: { params: Promise<{ documentId: string }> }
 ) {
     const userId = await verifyApiKey(req);
     if (!userId) {
@@ -59,8 +60,9 @@ export async function PATCH(
         const body = await req.json();
         const data = updateSchema.parse(body);
 
+        const { documentId } = await params;
         const document = await prisma.document.findUnique({
-            where: { id: params.documentId },
+            where: { id: documentId },
         });
 
         if (!document || document.userId !== userId) {
@@ -68,7 +70,7 @@ export async function PATCH(
         }
 
         const updated = await prisma.document.update({
-            where: { id: params.documentId },
+            where: { id: documentId },
             data,
         });
 
@@ -84,7 +86,7 @@ export async function PATCH(
 // DELETE /api/v1/documents/[id]
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { documentId: string } }
+    { params }: { params: Promise<{ documentId: string }> }
 ) {
     const userId = await verifyApiKey(req);
     if (!userId) {
@@ -92,8 +94,9 @@ export async function DELETE(
     }
 
     try {
+        const { documentId } = await params;
         const document = await prisma.document.findUnique({
-            where: { id: params.documentId },
+            where: { id: documentId },
         });
 
         if (!document || document.userId !== userId) {
@@ -101,7 +104,7 @@ export async function DELETE(
         }
 
         await prisma.document.delete({
-            where: { id: params.documentId },
+            where: { id: documentId },
         });
 
         return NextResponse.json({ success: true });

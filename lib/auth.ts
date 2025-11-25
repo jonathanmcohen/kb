@@ -15,8 +15,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         strategy: "jwt",
     },
     providers: [
-        Google,
-        GitHub,
+        ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+            ? [Google]
+            : []),
+        ...(process.env.GITHUB_ID && process.env.GITHUB_SECRET
+            ? [GitHub]
+            : []),
         Credentials({
             credentials: {
                 email: { label: "Email", type: "email" },
