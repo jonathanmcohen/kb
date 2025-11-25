@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Editor } from "@/components/editor/editor";
 import { IconPicker } from "@/components/icon-picker";
