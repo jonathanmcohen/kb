@@ -53,6 +53,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy all node_modules (simpler and more reliable than cherry-picking dependencies)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
+# Copy Prisma schema and migrations for runtime
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
 # Copy entrypoint script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
