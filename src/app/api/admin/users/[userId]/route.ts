@@ -12,9 +12,10 @@ const updateAdminSchema = z.object({
 // PATCH - Update user admin status
 export async function PATCH(
     req: NextRequest,
-    { params }: { params: { userId: string } }
+    { params }: { params: Promise<{ userId: string }> }
 ) {
     try {
+        const { userId } = await params;
         const session = await auth();
         if (!session?.user?.id) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -34,7 +35,7 @@ export async function PATCH(
         const { isAdmin } = updateAdminSchema.parse(body);
 
         // Prevent removing admin from yourself
-        if (params.userId === session.user.id && !isAdmin) {
+        if (userId === session.user.id && !isAdmin) {
             return NextResponse.json(
                 { error: "Cannot remove admin role from yourself" },
                 { status: 400 }
@@ -42,7 +43,7 @@ export async function PATCH(
         }
 
         const updatedUser = await prisma.user.update({
-            where: { id: params.userId },
+            where: { id: userId },
             data: { isAdmin },
             select: {
                 id: true,
