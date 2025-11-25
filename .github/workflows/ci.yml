@@ -42,7 +42,7 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:main
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           no-cache: true
           pull: true
           labels: ${{ steps.meta.outputs.labels }}
