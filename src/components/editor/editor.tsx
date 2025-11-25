@@ -15,39 +15,38 @@ interface EditorProps {
 export function Editor({ onChange, initialContent, editable = true }: EditorProps) {
     const { resolvedTheme } = useTheme();
 
+    // Safely parse initial content
+    const parsedContent = (() => {
+        if (!initialContent) return undefined;
+        try {
+            const parsed = JSON.parse(initialContent);
+            // Validate it's an array
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed;
+            }
+        } catch (e) {
+            console.error('Failed to parse editor content:', e);
+        }
+        return undefined;
+    })();
+
     const editor = useCreateBlockNote({
-        initialContent: initialContent ? JSON.parse(initialContent) : undefined,
+        initialContent: parsedContent,
         uploadFile: async (file: File) => {
-            // Request presigned URL from API
+            // Use FormData to upload file to proxy endpoint
+            const formData = new FormData();
+            formData.append('file', file);
+
             const response = await fetch('/api/upload', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    filename: file.name,
-                    contentType: file.type,
-                }),
+                body: formData,
             });
 
             if (!response.ok) {
-                throw new Error('Failed to get upload URL');
-            }
-
-            const { uploadUrl, url } = await response.json();
-
-            // Upload file to S3/MinIO using presigned URL
-            const uploadResponse = await fetch(uploadUrl, {
-                method: 'PUT',
-                body: file,
-                headers: {
-                    'Content-Type': file.type,
-                },
-            });
-
-            if (!uploadResponse.ok) {
                 throw new Error('Failed to upload file');
             }
 
-            // Return the public URL
+            const { url } = await response.json();
             return url;
         },
     });

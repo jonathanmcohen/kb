@@ -1,8 +1,6 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +14,7 @@ const s3Client = new S3Client({
     forcePathStyle: true, // Required for MinIO
 });
 
-const uploadSchema = z.object({
-    filename: z.string(),
-    contentType: z.string(),
-});
-
-// POST - Generate presigned URL for upload
+// POST - Upload file (proxy to S3/MinIO)
 export async function POST(req: NextRequest) {
     try {
         const session = await auth();
@@ -29,29 +22,43 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const body = await req.json();
-        const { filename, contentType } = uploadSchema.parse(body);
+        // Parse FormData
+        const formData = await req.formData();
+        const file = formData.get('file') as File;
 
-        const key = `${session.user.id}/${Date.now()}-${filename}`;
+        if (!file) {
+            return NextResponse.json({ error: "No file provided" }, { status: 400 });
+        }
+
+        // Generate unique key
+        const key = `${session.user.id}/${Date.now()}-${file.name}`;
         const bucket = process.env.S3_BUCKET || "kb-uploads";
 
+        // Convert File to Buffer
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+
+        // Upload to S3/MinIO
         const command = new PutObjectCommand({
             Bucket: bucket,
             Key: key,
-            ContentType: contentType,
+            Body: buffer,
+            ContentType: file.type,
         });
 
-        const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+        await s3Client.send(command);
+
+        // Return public URL (using internal endpoint for server-side access)
+        const publicUrl = `${process.env.S3_PUBLIC_URL || process.env.S3_ENDPOINT}/${bucket}/${key}`;
 
         return NextResponse.json({
-            uploadUrl: signedUrl,
+            url: publicUrl,
             key,
-            url: `${process.env.S3_PUBLIC_URL || process.env.S3_ENDPOINT}/${bucket}/${key}`,
         });
     } catch (error) {
         console.error("Upload error:", error);
         return NextResponse.json(
-            { error: "Failed to generate upload URL" },
+            { error: "Failed to upload file" },
             { status: 500 }
         );
     }
