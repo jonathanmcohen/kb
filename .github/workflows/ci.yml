@@ -39,5 +39,10 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:main
+          platforms: linux/amd64,linux/arm64
+          no-cache: true
+          pull: true
           labels: ${{ steps.meta.outputs.labels }}
