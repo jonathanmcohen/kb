@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const s3Client = new S3Client({
     region: process.env.AWS_REGION || "us-east-1",
     endpoint: process.env.S3_ENDPOINT, // For MinIO

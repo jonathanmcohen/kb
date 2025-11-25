@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 async function verifyApiKey(req: NextRequest) {
     const apiKey = req.headers.get("x-api-key");
     if (!apiKey || apiKey !== process.env.API_KEY) {
