@@ -21,11 +21,13 @@ ENV DATABASE_URL="postgresql://postgres:password@localhost:5432/kb?schema=public
 ENV NEXTAUTH_SECRET="build-time-secret-change-in-production"
 ENV NEXTAUTH_URL="http://localhost:3000"
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV TURBOPACK=0
 
 # Generate Prisma Client
 RUN npx prisma generate
 
 RUN npm run build
+
 
 # Production image, copy all the files and run next
 FROM base AS runner
