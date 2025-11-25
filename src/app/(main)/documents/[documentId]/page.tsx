@@ -11,7 +11,7 @@ import { ImageIcon, Smile } from "lucide-react";
 interface Document {
     id: string;
     title: string;
-    content: any;
+    content: unknown;
     icon?: string | null;
     coverImage?: string | null;
 }
@@ -20,8 +20,6 @@ export default function DocumentPage() {
     const params = useParams();
     const documentId = params.documentId as string;
     const queryClient = useQueryClient();
-    const [title, setTitle] = useState("");
-
     const { data: document } = useQuery<Document>({
         queryKey: ["document", documentId],
         queryFn: async () => {
@@ -32,11 +30,7 @@ export default function DocumentPage() {
         enabled: !!documentId,
     });
 
-    useEffect(() => {
-        if (document) {
-            setTitle(document.title);
-        }
-    }, [document]);
+    const [title, setTitle] = useState(document?.title ?? "");
 
     const updateMutation = useMutation({
         mutationFn: async (data: Partial<Document>) => {

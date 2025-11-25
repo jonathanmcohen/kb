@@ -34,7 +34,7 @@ export default function LoginPage() {
                 router.push("/documents");
                 router.refresh();
             }
-        } catch (error) {
+        } catch {
             setError("An error occurred");
         } finally {
             setLoading(false);
@@ -97,7 +97,7 @@ export default function LoginPage() {
                 </CardContent>
                 <CardFooter className="flex justify-center">
                     <p className="text-sm text-muted-foreground">
-                        Don't have an account?{" "}
+                        Don&apos;t have an account?{" "}
                         <Link href="/signup" className="text-primary hover:underline">
                             Sign up
                         </Link>

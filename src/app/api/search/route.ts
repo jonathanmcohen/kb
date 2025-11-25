@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
         });
 
         return NextResponse.json(documents);
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: "Failed to search documents" },
             { status: 500 }

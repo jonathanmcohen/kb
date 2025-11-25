@@ -37,7 +37,7 @@ export async function GET(
         }
 
         return NextResponse.json(document);
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: "Failed to fetch document" },
             { status: 500 }
@@ -74,7 +74,7 @@ export async function PATCH(
         });
 
         return NextResponse.json(updated);
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: "Failed to update document" },
             { status: 500 }
@@ -107,7 +107,7 @@ export async function DELETE(
         });
 
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: "Failed to delete document" },
             { status: 500 }
