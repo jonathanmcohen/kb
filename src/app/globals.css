@@ -120,3 +120,60 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Dark mode improvements */
+@layer base {
+  .dark {
+    /* Better input visibility */
+    input[type="text"], 
+    input[type="email"], 
+    input[type="password"],
+    textarea {
+      @apply bg-slate-800/50 text-slate-100 placeholder:text-slate-500;
+    }
+
+    /* Editor container improvements */
+    .bn-container {
+      @apply text-slate-100;
+    }
+
+    /* BlockNote specific improvements */
+    .bn-editor {
+      @apply bg-transparent;
+    }
+
+    .bn-block-content {
+      @apply text-slate-100;
+    }
+
+    /* Prose (markdown) improvements in editor */
+    .prose {
+      @apply text-slate-100;
+    }
+
+    .prose h1, .prose h2, .prose h3, .prose h4 {
+      @apply text-slate-100;
+    }
+
+    .prose p {
+      @apply text-slate-300;
+    }
+
+    .prose a {
+      @apply text-blue-400;
+    }
+
+    .prose code {
+      @apply bg-slate-800 text-slate-100;
+    }
+
+    .prose pre {
+      @apply bg-slate-900;
+    }
+
+    /* Button improvements */
+    .dark button[type="button"]:not(.destructive) {
+      @apply hover:bg-slate-800/80;
+    }
+  }
+}

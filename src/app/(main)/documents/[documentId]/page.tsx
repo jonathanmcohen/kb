@@ -57,6 +57,24 @@ export default function DocumentPage() {
         updateMutation.mutate({ content });
     };
 
+    const handleAddIcon = () => {
+        const emoji = prompt('Enter an emoji for this page:');
+        if (emoji) {
+            updateMutation.mutate({ icon: emoji });
+        }
+    };
+
+    const handleAddCover = async () => {
+        const url = prompt('Enter image URL for cover:');
+        if (url) {
+            updateMutation.mutate({ coverImage: url });
+        }
+    };
+
+    const handleContentChangeWrapper = (content: string) => {
+        updateMutation.mutate({ content });
+    };
+
     if (!document) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -77,13 +95,23 @@ export default function DocumentPage() {
                     <div className="group flex items-center gap-2 mb-4">
                         {document.icon && <span className="text-5xl">{document.icon}</span>}
                         {!document.icon && (
-                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="opacity-0 group-hover:opacity-100"
+                                onClick={handleAddIcon}
+                            >
                                 <Smile className="h-4 w-4 mr-2" />
                                 Add icon
                             </Button>
                         )}
                         {!document.coverImage && (
-                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="opacity-0 group-hover:opacity-100"
+                                onClick={handleAddCover}
+                            >
                                 <ImageIcon className="h-4 w-4 mr-2" />
                                 Add cover
                             </Button>
@@ -96,7 +124,7 @@ export default function DocumentPage() {
                         placeholder="Untitled"
                     />
                     <Editor
-                        onChange={handleContentChange}
+                        onChange={handleContentChangeWrapper}
                         initialContent={document.content ? JSON.stringify(document.content) : undefined}
                     />
                 </div>
