@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Editor } from "@/components/editor/editor";
 import { IconPicker } from "@/components/icon-picker";
@@ -34,6 +34,13 @@ export default function DocumentPage() {
 
     const [title, setTitle] = useState(document?.title ?? "");
 
+    // Sync title when document changes
+    useEffect(() => {
+        if (document?.title) {
+            setTitle(document.title);
+        }
+    }, [document?.title]);
+
     const updateMutation = useMutation({
         mutationFn: async (data: Partial<Document>) => {
             const res = await fetch(`/api/documents/${documentId}`, {
@@ -49,15 +56,25 @@ export default function DocumentPage() {
         },
     });
 
+    // Debounce title updates
+    useEffect(() => {
+        if (!document || title === document.title) return;
+
+        const timeout = setTimeout(() => {
+            updateMutation.mutate({ title });
+        }, 500);
+
+        return () => clearTimeout(timeout);
+    }, [title, document, updateMutation]);
+
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newTitle = e.target.value;
-        setTitle(newTitle);
-        updateMutation.mutate({ title: newTitle });
+        setTitle(e.target.value);
     };
 
-    const handleContentChangeWrapper = (content: string) => {
+    // Debounced content save
+    const handleContentChangeWrapper = useCallback((content: string) => {
         updateMutation.mutate({ content });
-    };
+    }, [updateMutation]);
 
     const handleIconChange = (icon: string) => {
         updateMutation.mutate({ icon });

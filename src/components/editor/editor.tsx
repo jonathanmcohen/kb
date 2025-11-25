@@ -5,6 +5,7 @@ import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { useTheme } from "next-themes";
+import { useRef, useEffect } from "react";
 
 interface EditorProps {
     onChange: (value: string) => void;
@@ -14,6 +15,7 @@ interface EditorProps {
 
 export function Editor({ onChange, initialContent, editable = true }: EditorProps) {
     const { resolvedTheme } = useTheme();
+    const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
     // Safely parse initial content
     const parsedContent = (() => {
@@ -51,6 +53,15 @@ export function Editor({ onChange, initialContent, editable = true }: EditorProp
         },
     });
 
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
+
     return (
         <div className="prose dark:prose-invert max-w-none">
             <BlockNoteView
@@ -58,7 +69,13 @@ export function Editor({ onChange, initialContent, editable = true }: EditorProp
                 editable={editable}
                 theme={resolvedTheme === "dark" ? "dark" : "light"}
                 onChange={() => {
-                    onChange(JSON.stringify(editor.document));
+                    // Debounce the onChange call
+                    if (timeoutRef.current) {
+                        clearTimeout(timeoutRef.current);
+                    }
+                    timeoutRef.current = setTimeout(() => {
+                        onChange(JSON.stringify(editor.document));
+                    }, 1000); // Save after 1 second of inactivity
                 }}
             />
         </div>
