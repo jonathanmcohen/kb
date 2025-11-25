@@ -6,6 +6,8 @@ import { LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 
+export const dynamic = "force-dynamic";
+
 export default async function MainLayout({
     children,
 }: {
