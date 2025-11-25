@@ -28,10 +28,14 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files (but allow .env.example)
+.env
+.env*.local
+!.env.example
+
+# turbo
+.turbo
 
 # vercel
 .vercel
@@ -40,4 +44,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+.vscode
+nerated/prisma
 /src/generated/prisma
