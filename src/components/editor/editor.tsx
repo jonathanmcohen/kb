@@ -5,7 +5,7 @@ import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { useTheme } from "next-themes";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 
 interface EditorProps {
     onChange: (value: string) => void;
@@ -18,7 +18,7 @@ export function Editor({ onChange, initialContent, editable = true }: EditorProp
     const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
     // Safely parse initial content
-    const parsedContent = (() => {
+    const parsedContent = useMemo(() => {
         if (!initialContent) return undefined;
         try {
             const parsed = JSON.parse(initialContent);
@@ -30,7 +30,7 @@ export function Editor({ onChange, initialContent, editable = true }: EditorProp
             console.error('Failed to parse editor content:', e);
         }
         return undefined;
-    })();
+    }, [initialContent]);
 
     const editor = useCreateBlockNote({
         initialContent: parsedContent,
@@ -53,16 +53,19 @@ export function Editor({ onChange, initialContent, editable = true }: EditorProp
         },
     });
 
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
+
     // Cleanup timeout on unmount and flush pending changes
     useEffect(() => {
         return () => {
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
-                // Flush pending changes immediately on unmount
-                onChange(JSON.stringify(editor.document));
+                // Flush pending changes immediately on unmount using the latest callback
+                onChangeRef.current(JSON.stringify(editor.document));
             }
         };
-    }, [editor, onChange]);
+    }, [editor]); // Remove onChange from dependencies
 
     return (
         <div className="prose dark:prose-invert max-w-none">

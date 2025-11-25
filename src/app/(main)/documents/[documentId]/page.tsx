@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Editor } from "@/components/editor/editor";
 import { IconPicker } from "@/components/icon-picker";
@@ -39,7 +39,7 @@ export default function DocumentPage() {
         setTitle(document.title);
     }
 
-    const updateMutation = useMutation({
+    const { mutate: updateDocument } = useMutation({
         mutationFn: async (data: Partial<Document>) => {
             const res = await fetch(`/api/documents/${documentId}`, {
                 method: "PATCH",
@@ -59,7 +59,7 @@ export default function DocumentPage() {
         if (!document || title === "" || title === document.title) return;
 
         const timeout = setTimeout(() => {
-            updateMutation.mutate({ title });
+            updateDocument({ title });
         }, 500);
 
         return () => clearTimeout(timeout);
@@ -71,24 +71,24 @@ export default function DocumentPage() {
     };
 
     // Content save handler - no debounce here, it's in the editor
-    const handleContentChange = (content: string) => {
-        updateMutation.mutate({ content });
-    };
+    const handleContentChange = useCallback((content: string) => {
+        updateDocument({ content });
+    }, [updateDocument]);
 
     const handleIconChange = (icon: string) => {
-        updateMutation.mutate({ icon });
+        updateDocument({ icon });
     };
 
     const handleCoverChange = (coverImage: string) => {
-        updateMutation.mutate({ coverImage });
+        updateDocument({ coverImage });
     };
 
     const handleRemoveCover = () => {
-        updateMutation.mutate({ coverImage: null });
+        updateDocument({ coverImage: null });
     };
 
     const handleRemoveIcon = () => {
-        updateMutation.mutate({ icon: null });
+        updateDocument({ icon: null });
     };
 
     if (!document) {
