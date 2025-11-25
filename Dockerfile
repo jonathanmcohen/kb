@@ -16,10 +16,15 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-# ENV NEXT_TELEMETRY_DISABLED 1
+# Set dummy environment variables for build
+# These are only used during build and will be overridden at runtime
+ENV DATABASE_URL="postgresql://postgres:password@localhost:5432/kb?schema=public"
+ENV NEXTAUTH_SECRET="build-time-secret"
+ENV NEXTAUTH_URL="http://localhost:3000"
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Generate Prisma Client
+RUN npx prisma generate
 
 RUN npm run build
 
