@@ -54,7 +54,10 @@ export function Editor({ onChange, initialContent, editable = true }: EditorProp
     });
 
     const onChangeRef = useRef(onChange);
-    onChangeRef.current = onChange;
+
+    useEffect(() => {
+        onChangeRef.current = onChange;
+    }, [onChange]);
 
     // Cleanup timeout on unmount and flush pending changes
     useEffect(() => {
