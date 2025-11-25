@@ -9,8 +9,6 @@ export function ThemeToggle() {
     const { setTheme, theme } = useTheme();
     const [mounted, setMounted] = useState(false);
 
-    // This is acceptable for hydration purposes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         setMounted(true);
     }, []);

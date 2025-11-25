@@ -1,8 +1,7 @@
-"use client";
-
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Editor } from "@/components/editor/editor";
 import { IconPicker } from "@/components/icon-picker";
@@ -32,14 +31,12 @@ export default function DocumentPage() {
         enabled: !!documentId,
     });
 
-    const [title, setTitle] = useState(document?.title ?? "");
+    const [title, setTitle] = useState("");
 
-    // Sync title when document changes
-    useEffect(() => {
-        if (document?.title) {
-            setTitle(document.title);
-        }
-    }, [document?.title]);
+    // Update title when document loads
+    if (document?.title && title === "") {
+        setTitle(document.title);
+    }
 
     const updateMutation = useMutation({
         mutationFn: async (data: Partial<Document>) => {
@@ -58,7 +55,7 @@ export default function DocumentPage() {
 
     // Debounce title updates
     useEffect(() => {
-        if (!document || title === document.title) return;
+        if (!document || title === "" || title === document.title) return;
 
         const timeout = setTimeout(() => {
             updateMutation.mutate({ title });
@@ -105,6 +102,7 @@ export default function DocumentPage() {
             {/* Cover Image */}
             {document.coverImage && (
                 <div className="h-[40vh] w-full relative group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                         src={document.coverImage}
                         alt="Cover"
