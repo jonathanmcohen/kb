@@ -59,6 +59,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_m
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma/build/*.wasm ./node_modules/.bin/
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma/build/*.js ./node_modules/.bin/
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/effect ./node_modules/effect
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/fast-check ./node_modules/fast-check
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@standard-schema ./node_modules/@standard-schema
 
 # Copy entrypoint script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
