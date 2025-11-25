@@ -54,7 +54,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Install prisma CLI for migrations (it's a dev dependency so not in standalone)
-RUN npm install -g prisma
+RUN npm install -g prisma@6.0.0
 
 # Copy Prisma schema and migrations for runtime
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
