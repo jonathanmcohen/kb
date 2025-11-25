@@ -51,7 +51,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy all node_modules (simpler and more reliable than cherry-picking dependencies)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+# COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Install prisma CLI for migrations (it's a dev dependency so not in standalone)
+RUN npm install -g prisma
 
 # Copy Prisma schema and migrations for runtime
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
