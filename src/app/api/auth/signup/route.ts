@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { name, email, password } = signupSchema.parse(body);
 
+        // Check if user already exists
         const existingUser = await prisma.user.findUnique({
             where: { email },
         });
@@ -27,26 +28,34 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        await prisma.user.create({
+        // Check if this is the first user (make them admin)
+        const userCount = await prisma.user.count();
+        const isFirstUser = userCount === 0;
+
+        // Create user
+        const user = await prisma.user.create({
             data: {
                 name,
                 email,
                 password: hashedPassword,
+                isAdmin: isFirstUser, // First user is automatically admin
             },
         });
 
-        return NextResponse.json({ message: "User created successfully" });
+        return NextResponse.json({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+        });
     } catch (error) {
         if (error instanceof z.ZodError) {
-            return NextResponse.json(
-                { error: "Invalid input" },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "Invalid input" }, { status: 400 });
         }
         return NextResponse.json(
-            { error: "Internal server error" },
+            { error: "Failed to create user" },
             { status: 500 }
         );
     }

@@ -63,16 +63,16 @@ export default function DocumentPage() {
         }, 500);
 
         return () => clearTimeout(timeout);
-    }, [title, document, updateMutation]);
+    }, [title, document?.title]); // Only depend on title and document.title
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setTitle(e.target.value);
     };
 
-    // Debounced content save
-    const handleContentChangeWrapper = useCallback((content: string) => {
+    // Content save handler - no debounce here, it's in the editor
+    const handleContentChange = (content: string) => {
         updateMutation.mutate({ content });
-    }, [updateMutation]);
+    };
 
     const handleIconChange = (icon: string) => {
         updateMutation.mutate({ icon });
@@ -161,7 +161,7 @@ export default function DocumentPage() {
 
                 {/* Editor */}
                 <Editor
-                    onChange={handleContentChangeWrapper}
+                    onChange={handleContentChange}
                     initialContent={document.content ? JSON.stringify(document.content) : undefined}
                 />
             </div>

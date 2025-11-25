@@ -14,6 +14,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?   // For local auth
+  isAdmin       Boolean   @default(false)
   accounts      Account[]
   sessions      Session[]
   documents     Document[]
