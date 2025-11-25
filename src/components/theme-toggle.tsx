@@ -9,12 +9,18 @@ export function ThemeToggle() {
     const { setTheme, theme } = useTheme();
     const [mounted, setMounted] = useState(false);
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    // Ensure component is mounted before showing theme toggle
+    // This prevents hydration mismatch
+    if (typeof window !== 'undefined' && !mounted) {
+        setTimeout(() => setMounted(true), 0);
+    }
 
     if (!mounted) {
-        return null;
+        return (
+            <Button variant="ghost" size="sm" className="w-9 h-9">
+                <span className="sr-only">Toggle theme</span>
+            </Button>
+        );
     }
 
     return (
