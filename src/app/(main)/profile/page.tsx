@@ -106,9 +106,9 @@ export default async function ProfilePage() {
                         <CardContent>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                    <p className="text-sm text-muted-foreground">Account Created</p>
+                                    <p className="text-sm text-muted-foreground">Member Since</p>
                                     <p className="text-2xl font-semibold">
-                                        {new Date(session.user.emailVerified || Date.now()).toLocaleDateString()}
+                                        {new Date().getFullYear()}
                                     </p>
                                 </div>
                                 <div className="space-y-1">
