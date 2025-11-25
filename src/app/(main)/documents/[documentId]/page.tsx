@@ -63,6 +63,7 @@ export default function DocumentPage() {
         }, 500);
 
         return () => clearTimeout(timeout);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [title, document?.title]); // Only depend on title and document.title
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
