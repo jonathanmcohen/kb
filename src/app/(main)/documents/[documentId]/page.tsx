@@ -91,6 +91,13 @@ export default function DocumentPage() {
         updateDocument({ icon: null });
     };
 
+    // Memoize initial content to prevent editor re-initialization on every render
+    const initialEditorContent = useMemo(() =>
+        document?.content ? JSON.stringify(document.content) : undefined,
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [] // Only compute on first render to prevent editor reset on save
+    );
+
     if (!document) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -163,11 +170,7 @@ export default function DocumentPage() {
                 {/* Editor */}
                 <Editor
                     onChange={handleContentChange}
-                    initialContent={useMemo(() =>
-                        document.content ? JSON.stringify(document.content) : undefined,
-                        // eslint-disable-next-line react-hooks/exhaustive-deps
-                        [] // Only compute once to prevent editor reset on save
-                    )}
+                    initialContent={initialEditorContent}
                 />
             </div>
         </div>
