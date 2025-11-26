@@ -50,6 +50,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
             return session;
         },
+        async signIn({ user }) {
+            if (user && (user as any).isDisabled) {
+                return false;
+            }
+            return true;
+        },
         ...authConfig.callbacks,
     },
 });

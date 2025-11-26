@@ -15,6 +15,7 @@ model User {
   image         String?
   password      String?   // For local auth
   isAdmin       Boolean   @default(false)
+  isDisabled    Boolean   @default(false)
   accounts      Account[]
   sessions      Session[]
   documents     Document[]

@@ -8,6 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import {
+    EditUserForm,
+    ResetPasswordForm,
+    ToggleAdminButton,
+    ToggleDisabledButton,
+} from "@/components/admin/user-management";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +73,9 @@ export default async function AdminUserPage({
                         {user.isAdmin && (
                             <Badge variant="default">Admin</Badge>
                         )}
+                        {(user as any).isDisabled && (
+                            <Badge variant="destructive">Disabled</Badge>
+                        )}
                     </div>
                     <p className="text-muted-foreground">
                         View and manage user information
@@ -83,15 +92,8 @@ export default async function AdminUserPage({
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid gap-2">
-                                <Label>Name</Label>
-                                <Input value={user.name || "N/A"} disabled />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label>Email</Label>
-                                <Input value={user.email || "N/A"} disabled />
-                            </div>
-                            <div className="grid gap-2">
+                            <EditUserForm user={user as any} />
+                            <div className="grid gap-2 pt-4 border-t">
                                 <Label>User ID</Label>
                                 <Input value={user.id} disabled className="font-mono text-xs" />
                             </div>
@@ -102,6 +104,19 @@ export default async function AdminUserPage({
                                     disabled
                                 />
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Security */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Security</CardTitle>
+                            <CardDescription>
+                                Manage password and access
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ResetPasswordForm userId={user.id} />
                         </CardContent>
                     </Card>
 
@@ -135,7 +150,7 @@ export default async function AdminUserPage({
                                 Manage user permissions and status
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="font-medium">Administrator Role</p>
@@ -145,9 +160,21 @@ export default async function AdminUserPage({
                                             : "Grant admin access to this user"}
                                     </p>
                                 </div>
-                                <Button variant="outline" disabled>
-                                    {user.isAdmin ? "Revoke Admin" : "Make Admin"}
-                                </Button>
+                                <ToggleAdminButton userId={user.id} isAdmin={user.isAdmin} />
+                            </div>
+                            <div className="flex items-center justify-between pt-4 border-t">
+                                <div>
+                                    <p className="font-medium">Account Status</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {(user as any).isDisabled
+                                            ? "This account is currently disabled"
+                                            : "Disable this account to prevent access"}
+                                    </p>
+                                </div>
+                                <ToggleDisabledButton
+                                    userId={user.id}
+                                    isDisabled={(user as any).isDisabled}
+                                />
                             </div>
                         </CardContent>
                     </Card>
