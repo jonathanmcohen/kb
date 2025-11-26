@@ -35,7 +35,7 @@ export async function GET(
 
         // Convert stream to buffer
         const chunks: Uint8Array[] = [];
-        for await (const chunk of stream as any) {
+        for await (const chunk of stream as AsyncIterable<Uint8Array>) {
             chunks.push(chunk);
         }
         const buffer = Buffer.concat(chunks);
@@ -48,10 +48,10 @@ export async function GET(
                 "Content-Length": buffer.length.toString(),
             },
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Image fetch error:", error);
 
-        if (error.name === "NoSuchKey" || error.Code === "NoSuchKey") {
+        if (error && typeof error === 'object' && ('name' in error && error.name === "NoSuchKey" || 'Code' in error && (error as { Code: string }).Code === "NoSuchKey")) {
             return NextResponse.json({ error: "Image not found" }, { status: 404 });
         }
 
