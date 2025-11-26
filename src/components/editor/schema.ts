@@ -4,14 +4,14 @@ import {
     defaultInlineContentSpecs,
     defaultStyleSpecs
 } from "@blocknote/core";
-import { getHighlighter, bundledLanguages } from "shiki";
+import { bundledLanguages, createHighlighter } from "shiki";
 
 // Create a Shiki highlighter
 let highlighter: any = null;
 
 async function getShikiHighlighter() {
     if (!highlighter) {
-        highlighter = await getHighlighter({
+        highlighter = await createHighlighter({
             themes: ['github-dark', 'github-light'],
             langs: Object.keys(bundledLanguages)
         });
@@ -29,4 +29,4 @@ export const schema = BlockNoteSchema.create({
 });
 
 export { getShikiHighlighter };
-export type SchemaType = typeof schema.schema;
+export type SchemaType = typeof schema;
