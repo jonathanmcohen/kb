@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Editor } from "@/components/editor/editor";
 import { IconPicker } from "@/components/icon-picker";
@@ -163,7 +163,11 @@ export default function DocumentPage() {
                 {/* Editor */}
                 <Editor
                     onChange={handleContentChange}
-                    initialContent={document.content ? JSON.stringify(document.content) : undefined}
+                    initialContent={useMemo(() =>
+                        document.content ? JSON.stringify(document.content) : undefined,
+                        // eslint-disable-next-line react-hooks/exhaustive-deps
+                        [] // Only compute once to prevent editor reset on save
+                    )}
                 />
             </div>
         </div>
