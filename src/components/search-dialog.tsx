@@ -36,8 +36,8 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     });
 
     const handleSelect = useCallback((documentId: string) => {
+        setQuery(""); // Reset query
         onOpenChange(false);
-        setQuery("");
         router.push(`/documents/${documentId}`);
     }, [router, onOpenChange]);
 
@@ -53,13 +53,6 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
         document.addEventListener("keydown", down);
         return () => document.removeEventListener("keydown", down);
     }, [onOpenChange]);
-
-    // Reset query when dialog closes
-    useEffect(() => {
-        if (!open) {
-            setQuery("");
-        }
-    }, [open]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

@@ -79,62 +79,96 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Notion-inspired dark mode with warmer, softer tones */
+  --background: oklch(0.18 0.005 265);
+  /* Slightly warm dark blue-gray */
+  --foreground: oklch(0.95 0.005 265);
+  /* Soft white with hint of warmth */
+
+  --card: oklch(0.22 0.006 265);
+  /* Slightly lighter than background */
+  --card-foreground: oklch(0.95 0.005 265);
+
+  --popover: oklch(0.20 0.006 265);
+  /* Subtle elevation */
+  --popover-foreground: oklch(0.95 0.005 265);
+
+  --primary: oklch(0.85 0.01 265);
+  /* Softer white for primary actions */
+  --primary-foreground: oklch(0.20 0.005 265);
+
+  --secondary: oklch(0.25 0.008 265);
+  /* Warmer secondary background */
+  --secondary-foreground: oklch(0.90 0.005 265);
+
+  --muted: oklch(0.25 0.008 265);
+  /* Muted elements */
+  --muted-foreground: oklch(0.60 0.01 265);
+  /* Better contrast for muted text */
+
+  --accent: oklch(0.27 0.01 265);
+  /* Subtle accent */
+  --accent-foreground: oklch(0.95 0.005 265);
+
+  --destructive: oklch(0.55 0.22 15);
+  /* Red with better visibility */
+
+  --border: oklch(0.30 0.008 265);
+  /* More visible borders */
+  --input: oklch(0.24 0.008 265);
+  /* Input background */
+  --ring: oklch(0.50 0.05 265);
+  /* Focus ring */
+
+  /* Charts with Notion-inspired colors */
+  --chart-1: oklch(0.65 0.19 250);
+  /* Blue */
+  --chart-2: oklch(0.70 0.15 160);
+  /* Teal */
+  --chart-3: oklch(0.75 0.18 80);
+  /* Yellow */
+  --chart-4: oklch(0.60 0.20 320);
+  /* Purple */
+  --chart-5: oklch(0.65 0.22 30);
+  /* Red-Orange */
+
+  /* Sidebar with subtle warmth */
+  --sidebar: oklch(0.19 0.006 265);
+  --sidebar-foreground: oklch(0.90 0.005 265);
+  --sidebar-primary: oklch(0.65 0.19 250);
+  /* Blue accent */
+  --sidebar-primary-foreground: oklch(0.95 0.005 265);
+  --sidebar-accent: oklch(0.25 0.008 265);
+  --sidebar-accent-foreground: oklch(0.90 0.005 265);
+  --sidebar-border: oklch(0.28 0.008 265);
+  --sidebar-ring: oklch(0.50 0.05 265);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
 }
 
-/* Dark mode improvements */
+/* Dark mode improvements - Notion-inspired */
 @layer base {
   .dark {
-    /* Better input visibility */
-    input[type="text"], 
-    input[type="email"], 
+
+    /* Better input visibility with Notion-style inputs */
+    input[type="text"],
+    input[type="email"],
     input[type="password"],
     textarea {
-      @apply bg-slate-800/50 text-slate-100 placeholder:text-slate-500;
+      @apply bg-[oklch(0.22_0.006_265)] text-[oklch(0.95_0.005_265)] border-[oklch(0.30_0.008_265)] placeholder:text-[oklch(0.50_0.01_265)];
     }
 
     /* Editor container improvements */
     .bn-container {
-      @apply text-slate-100;
+      @apply text-[oklch(0.92_0.005_265)];
     }
 
     /* BlockNote specific improvements */
@@ -143,37 +177,55 @@
     }
 
     .bn-block-content {
-      @apply text-slate-100;
+      @apply text-[oklch(0.92_0.005_265)];
     }
 
-    /* Prose (markdown) improvements in editor */
+    /* Prose (markdown) improvements in editor - Notion-like typography */
     .prose {
-      @apply text-slate-100;
+      @apply text-[oklch(0.90_0.005_265)];
     }
 
-    .prose h1, .prose h2, .prose h3, .prose h4 {
-      @apply text-slate-100;
+    .prose h1,
+    .prose h2,
+    .prose h3,
+    .prose h4 {
+      @apply text-[oklch(0.95_0.005_265)];
     }
 
     .prose p {
-      @apply text-slate-300;
+      @apply text-[oklch(0.85_0.005_265)];
     }
 
     .prose a {
-      @apply text-blue-400;
+      @apply text-[oklch(0.70_0.15_250)] hover:text-[oklch(0.75_0.15_250)];
     }
 
     .prose code {
-      @apply bg-slate-800 text-slate-100;
+      @apply bg-[oklch(0.22_0.006_265)] text-[oklch(0.85_0.10_30)] px-1.5 py-0.5 rounded;
     }
 
     .prose pre {
-      @apply bg-slate-900;
+      @apply bg-[oklch(0.16_0.005_265)] border border-[oklch(0.28_0.008_265)];
     }
 
-    /* Button improvements */
-    .dark button[type="button"]:not(.destructive) {
-      @apply hover:bg-slate-800/80;
+    /* Card and popover enhancements */
+    [data-radix-popper-content-wrapper] {
+      @apply shadow-xl shadow-black/20;
+    }
+
+    /* Better hover states */
+    button[type="button"]:not(.destructive):hover {
+      @apply bg-[oklch(0.25_0.008_265)];
+    }
+
+    /* Sidebar specific improvements */
+    .group[data-sidebar] {
+      @apply bg-[oklch(0.19_0.006_265)] border-r border-[oklch(0.28_0.008_265)];
+    }
+
+    /* Dialog and modal overlays */
+    [data-state="open"][data-radix-dialog-overlay] {
+      @apply bg-black/60 backdrop-blur-sm;
     }
   }
 }

@@ -6,6 +6,8 @@ import { SuggestionMenuController } from "@blocknote/react";
 import { getDefaultReactSlashMenuItems } from "@blocknote/react";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
+// Import Prism themes for syntax highlighting
+import "prismjs/themes/prism-tomorrow.css";
 import { useTheme } from "next-themes";
 import { useRef, useEffect, useMemo } from "react";
 
