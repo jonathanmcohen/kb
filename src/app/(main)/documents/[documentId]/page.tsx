@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Editor } from "@/components/editor/editor";
 import { IconPicker } from "@/components/icon-picker";
@@ -91,12 +91,17 @@ export default function DocumentPage() {
         updateDocument({ icon: null });
     };
 
-    // Memoize initial content to prevent editor re-initialization on every render
-    const initialEditorContent = useMemo(() =>
-        document?.content ? JSON.stringify(document.content) : undefined,
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [] // Only compute on first render to prevent editor reset on save
-    );
+    // Track if we've set the initial content to prevent re-initialization
+    const contentInitialized = useRef(false);
+
+    // Set initial content only once when document loads
+    const initialEditorContent = useMemo(() => {
+        if (!document?.content || contentInitialized.current) {
+            return undefined;
+        }
+        contentInitialized.current = true;
+        return JSON.stringify(document.content);
+    }, [document?.content]);
 
     if (!document) {
         return (
