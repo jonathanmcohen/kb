@@ -27,7 +27,7 @@ import { useRef, useEffect, useMemo } from "react";
 
 // Make Prism available globally for BlockNote
 if (typeof window !== "undefined") {
-    (window as any).Prism = Prism;
+    (window as Window & { Prism: typeof Prism }).Prism = Prism;
 }
 
 interface EditorProps {
