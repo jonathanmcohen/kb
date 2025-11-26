@@ -164,7 +164,7 @@ export default function DocumentPage() {
                 <Editor
                     key={document.id} // Force remount when switching documents
                     onChange={handleContentChange}
-                    initialContent={document.content ? JSON.stringify(document.content) : undefined}
+                    initialContent={document.content as string | undefined}
                 />
             </div>
         </div>
