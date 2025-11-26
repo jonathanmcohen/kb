@@ -2,6 +2,8 @@
 
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
+import { SuggestionMenuController } from "@blocknote/react";
+import { getDefaultReactSlashMenuItems } from "@blocknote/react";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { useTheme } from "next-themes";
@@ -76,6 +78,7 @@ export function Editor({ onChange, initialContent, editable = true }: EditorProp
                 editor={editor}
                 editable={editable}
                 theme={resolvedTheme === "dark" ? "dark" : "light"}
+                slashMenu={false} // Disable default slash menu to use controller
                 onChange={() => {
                     // Debounce the onChange call
                     if (timeoutRef.current) {
@@ -85,7 +88,17 @@ export function Editor({ onChange, initialContent, editable = true }: EditorProp
                         onChange(JSON.stringify(editor.document));
                     }, 1000); // Save after 1 second of inactivity
                 }}
-            />
+            >
+                {/* Slash Menu for commands like /heading, /bullet-list, etc. */}
+                <SuggestionMenuController
+                    triggerCharacter={"/"}
+                    getItems={async (query) =>
+                        getDefaultReactSlashMenuItems(editor).filter((item) =>
+                            item.title.toLowerCase().includes(query.toLowerCase())
+                        )
+                    }
+                />
+            </BlockNoteView>
         </div>
     );
 }
