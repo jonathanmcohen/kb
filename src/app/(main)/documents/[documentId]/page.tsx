@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Editor } from "@/components/editor/editor";
 import { IconPicker } from "@/components/icon-picker";
@@ -91,23 +91,6 @@ export default function DocumentPage() {
         updateDocument({ icon: null });
     };
 
-    // Track which document ID we've initialized to prevent re-initialization on save
-    const initializedDocId = useRef<string | null>(null);
-
-    // Set initial content only once per document
-    const initialEditorContent = useMemo(() => {
-        if (!document?.content) {
-            return undefined;
-        }
-        // If this is a new document (different ID), reset and initialize
-        if (initializedDocId.current !== document.id) {
-            initializedDocId.current = document.id;
-            return JSON.stringify(document.content);
-        }
-        // Same document, don't re-initialize
-        return undefined;
-    }, [document?.id, document?.content]);
-
     if (!document) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -179,8 +162,9 @@ export default function DocumentPage() {
 
                 {/* Editor */}
                 <Editor
+                    key={document.id} // Force remount when switching documents
                     onChange={handleContentChange}
-                    initialContent={initialEditorContent}
+                    initialContent={document.content ? JSON.stringify(document.content) : undefined}
                 />
             </div>
         </div>
