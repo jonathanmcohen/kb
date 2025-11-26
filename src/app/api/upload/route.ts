@@ -12,6 +12,7 @@ const s3Client = new S3Client({
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "minioadmin",
     },
     forcePathStyle: true, // Required for MinIO
+    tls: false, // Disable TLS for local MinIO (uses HTTP)
 });
 
 // POST - Upload file (proxy to S3/MinIO)
