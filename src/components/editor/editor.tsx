@@ -1,11 +1,13 @@
 "use client";
 
 import { useCreateBlockNote } from "@blocknote/react";
+import { BlockNoteSchema, createCodeBlockSpec } from "@blocknote/core";
 import { BlockNoteView } from "@blocknote/mantine";
 import { SuggestionMenuController } from "@blocknote/react";
 import { getDefaultReactSlashMenuItems } from "@blocknote/react";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
+import { codeBlockOptions } from "@blocknote/code-block";
 import { useTheme } from "next-themes";
 import { useRef, useEffect, useMemo } from "react";
 
@@ -35,6 +37,11 @@ export function Editor({ onChange, initialContent, editable = true }: EditorProp
     }, [initialContent]);
 
     const editor = useCreateBlockNote({
+        schema: BlockNoteSchema.create().extend({
+            blockSpecs: {
+                codeBlock: createCodeBlockSpec(codeBlockOptions),
+            },
+        }),
         initialContent: parsedContent,
         uploadFile: async (file: File) => {
             // Use FormData to upload file to proxy endpoint
