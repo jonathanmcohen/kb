@@ -8,7 +8,7 @@ import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { useTheme } from "next-themes";
 import { useRef, useEffect, useMemo } from "react";
-import { schema, type CustomSchema } from "./schema";
+import { codeBlockOptions } from "./schema";
 
 interface EditorProps {
     onChange: (value: string) => void;
@@ -35,9 +35,9 @@ export function Editor({ onChange, initialContent, editable = true }: EditorProp
         return undefined;
     }, [initialContent]);
 
-    const editor = useCreateBlockNote<CustomSchema>({
-        schema,
+    const editor = useCreateBlockNote({
         initialContent: parsedContent,
+        _codeBlockOptions: codeBlockOptions,
         uploadFile: async (file: File) => {
             // Use FormData to upload file to proxy endpoint
             const formData = new FormData();
