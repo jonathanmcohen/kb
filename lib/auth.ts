@@ -51,7 +51,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return session;
         },
         async signIn({ user }) {
-            if (user && (user as any).isDisabled) {
+            if (user && "isDisabled" in user && user.isDisabled) {
                 return false;
             }
             return true;

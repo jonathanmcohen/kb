@@ -73,7 +73,7 @@ export default async function AdminUserPage({
                         {user.isAdmin && (
                             <Badge variant="default">Admin</Badge>
                         )}
-                        {(user as any).isDisabled && (
+                        {"isDisabled" in user && user.isDisabled && (
                             <Badge variant="destructive">Disabled</Badge>
                         )}
                     </div>
@@ -92,7 +92,7 @@ export default async function AdminUserPage({
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <EditUserForm user={user as any} />
+                            <EditUserForm user={user as { id: string; name: string | null; email: string | null; isAdmin: boolean; isDisabled: boolean }} />
                             <div className="grid gap-2 pt-4 border-t">
                                 <Label>User ID</Label>
                                 <Input value={user.id} disabled className="font-mono text-xs" />
@@ -166,14 +166,14 @@ export default async function AdminUserPage({
                                 <div>
                                     <p className="font-medium">Account Status</p>
                                     <p className="text-sm text-muted-foreground">
-                                        {(user as any).isDisabled
+                                        {"isDisabled" in user && user.isDisabled
                                             ? "This account is currently disabled"
                                             : "Disable this account to prevent access"}
                                     </p>
                                 </div>
                                 <ToggleDisabledButton
                                     userId={user.id}
-                                    isDisabled={(user as any).isDisabled}
+                                    isDisabled={"isDisabled" in user ? (user.isDisabled as boolean) : false}
                                 />
                             </div>
                         </CardContent>
