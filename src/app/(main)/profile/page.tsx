@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { PasswordChangeDialog } from "@/components/profile/password-change";
 import { MFASetupDialog } from "@/components/profile/mfa-setup";
 import { MFADisableDialog } from "@/components/profile/mfa-disable";
+import { AvatarUpload } from "@/components/profile/avatar-upload";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -20,11 +21,9 @@ export default async function ProfilePage() {
         redirect("/login");
     }
 
-    const userInitials = session.user.name
-        ?.split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase() || "U";
+    if (!session?.user) {
+        redirect("/login");
+    }
 
     // Get user MFA status
     const userData = await prisma.user.findUnique({
@@ -54,19 +53,11 @@ export default async function ProfilePage() {
                                 Your avatar is displayed across the application
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="flex items-center gap-6">
-                            <Avatar className="h-24 w-24">
-                                <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
-                                <AvatarFallback className="text-2xl">{userInitials}</AvatarFallback>
-                            </Avatar>
-                            <div className="space-y-2">
-                                <p className="text-sm text-muted-foreground">
-                                    {session.user.image
-                                        ? "Profile picture from your connected account"
-                                        : "Using default avatar based on your initials"
-                                    }
-                                </p>
-                            </div>
+                        <CardContent>
+                            <AvatarUpload
+                                currentImage={session.user.image}
+                                name={session.user.name}
+                            />
                         </CardContent>
                     </Card>
 

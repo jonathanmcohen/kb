@@ -220,7 +220,44 @@ export async function disableMFA(formData: FormData) {
         if (error instanceof z.ZodError) {
             return { error: error.issues[0].message };
         }
-        console.error("Failed to disable MFA:", error);
-        return { error: "Failed to disable MFA" };
+    }
+}
+
+// Profile Picture
+const updateProfilePictureSchema = z.object({
+    image: z.string().min(1, "Image data is required"),
+});
+
+export async function updateProfilePicture(formData: FormData) {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) {
+            return { error: "Unauthorized" };
+        }
+
+        const rawData = {
+            image: formData.get("image"),
+        };
+
+        const validatedData = updateProfilePictureSchema.parse(rawData);
+
+        // Check file size (approximate from base64 length)
+        // Base64 is ~1.33x larger than binary. 500KB binary ~= 666KB base64
+        if (validatedData.image.length > 700000) {
+            return { error: "Image too large. Please use an image under 500KB." };
+        }
+
+        await prisma.user.update({
+            where: { id: session.user.id },
+            data: { image: validatedData.image },
+        });
+
+        return { success: true };
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return { error: error.issues[0].message };
+        }
+        console.error("Failed to update profile picture:", error);
+        return { error: "Failed to update profile picture" };
     }
 }

@@ -29,12 +29,22 @@ export default function LoginPage() {
             });
 
             if (result?.error) {
-                setError("Invalid credentials");
+                if (result.error === "MFA_REQUIRED") {
+                    // Redirect to MFA verification page with email
+                    router.push(`/verify-mfa?email=${encodeURIComponent(email)}`);
+                } else {
+                    setError("Invalid credentials");
+                }
             } else {
                 router.push("/documents");
                 router.refresh();
             }
-        } catch {
+        } catch (err) {
+            // Check if it's the custom MFA error thrown from authorize
+            if (err instanceof Error && err.message === "MFA_REQUIRED") {
+                router.push(`/verify-mfa?email=${encodeURIComponent(email)}`);
+                return;
+            }
             setError("An error occurred");
         } finally {
             setLoading(false);
@@ -42,7 +52,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
             <Card className="w-full max-w-md">
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>

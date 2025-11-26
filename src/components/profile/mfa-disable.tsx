@@ -26,7 +26,7 @@ export function MFADisableDialog() {
         const result = await disableMFA(formData);
         setIsLoading(false);
 
-        if (result.error) {
+        if (result?.error) {
             toast.error(result.error);
         } else {
             toast.success("Two-factor authentication disabled");
