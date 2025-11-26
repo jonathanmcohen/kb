@@ -6,10 +6,29 @@ import { SuggestionMenuController } from "@blocknote/react";
 import { getDefaultReactSlashMenuItems } from "@blocknote/react";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
-// Import Prism themes for syntax highlighting
+// Import Prism for syntax highlighting
+import Prism from "prismjs";
 import "prismjs/themes/prism-tomorrow.css";
+// Import common languages
+import "prismjs/components/prism-javascript";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-jsx";
+import "prismjs/components/prism-tsx";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-java";
+import "prismjs/components/prism-css";
+import "prismjs/components/prism-sql";
+import "prismjs/components/prism-bash";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-markdown";
+import "prismjs/components/prism-yaml";
 import { useTheme } from "next-themes";
 import { useRef, useEffect, useMemo } from "react";
+
+// Make Prism available globally for BlockNote
+if (typeof window !== "undefined") {
+    (window as any).Prism = Prism;
+}
 
 interface EditorProps {
     onChange: (value: string) => void;
