@@ -13,11 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SearchDialog } from "@/components/search-dialog";
 import { Search, Settings, LogOut, User, Shield } from "lucide-react";
+import { useState } from "react";
 
 export function Navbar() {
     const { data: session } = useSession();
     const router = useRouter();
+    const [searchOpen, setSearchOpen] = useState(false);
 
     const userInitials = session?.user?.name
         ?.split(" ")
@@ -29,7 +32,7 @@ export function Navbar() {
         <div className="h-14 border-b px-4 flex items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center gap-4">
                 <h1 className="text-xl font-bold">Knowledge Base</h1>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => setSearchOpen(true)}>
                     <Search className="h-4 w-4 mr-2" />
                     Search
                 </Button>
@@ -80,6 +83,8 @@ export function Navbar() {
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
+
+            <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
         </div>
     );
 }
