@@ -12,13 +12,7 @@ export const s3Client = new S3Client({
 });
 
 export function getS3PublicUrl(bucket: string, key: string): string {
-    if (process.env.S3_PUBLIC_URL) {
-        // Ensure no trailing slash on base and no leading slash on key if we join them
-        const baseUrl = process.env.S3_PUBLIC_URL.replace(/\/$/, "");
-        return `${baseUrl}/${key}`;
-    } else {
-        // Fallback to endpoint-based URL construction
-        const endpoint = process.env.S3_ENDPOINT?.replace(/\/$/, "");
-        return `${endpoint}/${bucket}/${key}`;
-    }
+    // Return URL through our authenticated proxy API
+    // This allows us to keep the S3 bucket private while serving images to authenticated users
+    return `/api/images/${key}`;
 }
