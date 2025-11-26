@@ -13,11 +13,11 @@ function extractTextFromContent(content: unknown): string {
         if (!Array.isArray(blocks)) return '';
 
         return blocks
-            .map((block: any) => {
+            .map((block: { content?: Array<{ text?: string }> }) => {
                 // Extract text from block content
                 if (block.content && Array.isArray(block.content)) {
                     return block.content
-                        .map((item: any) => item.text || '')
+                        .map((item: { text?: string }) => item.text || '')
                         .join(' ');
                 }
                 return '';

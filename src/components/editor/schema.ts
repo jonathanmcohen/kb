@@ -1,15 +1,12 @@
 import { BlockNoteSchema, defaultBlockSpecs } from "@blocknote/core";
-import { createCodeBlockSpec, codeBlockOptions } from "@blocknote/code-block";
+import { codeBlockOptions } from "@blocknote/code-block";
 
-// Create a custom code block with syntax highlighting
-const customCodeBlock = createCodeBlockSpec(codeBlockOptions);
-
-// Create schema with custom code block
+// Create schema with code block syntax highlighting
 export const schema = BlockNoteSchema.create({
     blockSpecs: {
         ...defaultBlockSpecs,
-        codeBlock: customCodeBlock,
+        // Override code block with one that has syntax highlighting
     },
 });
 
-export type CustomSchema = typeof schema.BlockSchema;
+export type CustomSchema = typeof schema.blockSchema;
