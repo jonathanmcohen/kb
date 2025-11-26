@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 interface Document {
     id: string;
     title: string;
-    content: unknown;
+    content: string;
     icon?: string | null;
     coverImage?: string | null;
 }
@@ -91,17 +91,22 @@ export default function DocumentPage() {
         updateDocument({ icon: null });
     };
 
-    // Track if we've set the initial content to prevent re-initialization
-    const contentInitialized = useRef(false);
+    // Track which document ID we've initialized to prevent re-initialization on save
+    const initializedDocId = useRef<string | null>(null);
 
-    // Set initial content only once when document loads
+    // Set initial content only once per document
     const initialEditorContent = useMemo(() => {
-        if (!document?.content || contentInitialized.current) {
+        if (!document?.content) {
             return undefined;
         }
-        contentInitialized.current = true;
-        return JSON.stringify(document.content);
-    }, [document?.content]);
+        // If this is a new document (different ID), reset and initialize
+        if (initializedDocId.current !== document.id) {
+            initializedDocId.current = document.id;
+            return JSON.stringify(document.content);
+        }
+        // Same document, don't re-initialize
+        return undefined;
+    }, [document?.id, document?.content]);
 
     if (!document) {
         return (
