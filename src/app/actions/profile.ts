@@ -228,6 +228,9 @@ const updateProfilePictureSchema = z.object({
     image: z.string().min(1, "Image data is required"),
 });
 
+import { s3Client, getS3PublicUrl } from "@/lib/s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+
 export async function updateProfilePicture(formData: FormData) {
     try {
         const session = await auth();
@@ -241,15 +244,33 @@ export async function updateProfilePicture(formData: FormData) {
 
         const validatedData = updateProfilePictureSchema.parse(rawData);
 
-        // Check file size (approximate from base64 length)
-        // Base64 is ~1.33x larger than binary. 500KB binary ~= 666KB base64
-        if (validatedData.image.length > 700000) {
-            return { error: "Image too large. Please use an image under 500KB." };
+        // The image comes in as a base64 data URL from the client (avatar-upload.tsx)
+        // We need to convert it to a buffer to upload to S3
+        const base64Data = validatedData.image.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, 'base64');
+
+        // Check file size (server-side check)
+        if (buffer.length > 2 * 1024 * 1024) {
+            return { error: "Image too large. Please use an image under 2MB." };
         }
+
+        const key = `avatars/${session.user.id}-${Date.now()}.jpg`;
+        const bucket = process.env.S3_BUCKET || "kb-uploads";
+
+        const command = new PutObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            Body: buffer,
+            ContentType: "image/jpeg", // We converted to jpeg in client, or we can detect. Client says jpeg 0.7 quality.
+        });
+
+        await s3Client.send(command);
+
+        const publicUrl = getS3PublicUrl(bucket, key);
 
         await prisma.user.update({
             where: { id: session.user.id },
-            data: { image: validatedData.image },
+            data: { image: publicUrl },
         });
 
         return { success: true };
