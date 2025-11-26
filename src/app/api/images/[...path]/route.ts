@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 // GET - Fetch image from S3 (authenticated)
 export async function GET(
     req: NextRequest,
-    { params }: { params: { path: string[] } }
+    { params }: { params: Promise<{ path: string[] }> }
 ) {
     try {
         const session = await auth();
@@ -17,7 +17,8 @@ export async function GET(
         }
 
         const bucket = process.env.S3_BUCKET || "kb-uploads";
-        const key = params.path.join('/');
+        const { path } = await params;
+        const key = path.join('/');
 
         // Fetch from S3
         const command = new GetObjectCommand({
