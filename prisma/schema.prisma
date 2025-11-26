@@ -16,6 +16,8 @@ model User {
   password      String?   // For local auth
   isAdmin       Boolean   @default(false)
   isDisabled    Boolean   @default(false)
+  mfaEnabled    Boolean   @default(false)
+  mfaSecret     String?
   accounts      Account[]
   sessions      Session[]
   documents     Document[]

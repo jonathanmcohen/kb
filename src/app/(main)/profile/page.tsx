@@ -6,6 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { PasswordChangeDialog } from "@/components/profile/password-change";
+import { MFASetupDialog } from "@/components/profile/mfa-setup";
+import { MFADisableDialog } from "@/components/profile/mfa-disable";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +25,15 @@ export default async function ProfilePage() {
         .map((n) => n[0])
         .join("")
         .toUpperCase() || "U";
+
+    // Get user MFA status
+    const userData = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { mfaEnabled: true, password: true },
+    });
+
+    const mfaEnabled = userData?.mfaEnabled || false;
+    const hasPassword = !!userData?.password;
 
     return (
         <div className="h-full overflow-y-auto">
@@ -138,9 +151,7 @@ export default async function ProfilePage() {
                                     </p>
                                 </div>
                                 {session.user.email && (
-                                    <Button variant="outline" disabled>
-                                        Change Password
-                                    </Button>
+                                    <PasswordChangeDialog />
                                 )}
                             </div>
                             <Separator />
@@ -148,12 +159,14 @@ export default async function ProfilePage() {
                                 <div>
                                     <p className="font-medium">Two-Factor Authentication</p>
                                     <p className="text-sm text-muted-foreground">
-                                        Add an extra layer of security
+                                        {mfaEnabled
+                                            ? "2FA is enabled on your account"
+                                            : "Add an extra layer of security"}
                                     </p>
                                 </div>
-                                <Button variant="outline" disabled>
-                                    Enable 2FA
-                                </Button>
+                                {hasPassword && (
+                                    mfaEnabled ? <MFADisableDialog /> : <MFASetupDialog />
+                                )}
                             </div>
                         </CardContent>
                     </Card>
