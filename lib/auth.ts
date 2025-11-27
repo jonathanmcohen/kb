@@ -8,10 +8,10 @@ import GitHub from "next-auth/providers/github";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
-class MfaRequiredError extends CredentialsSignin {
+class MfaRequiredError extends AuthError {
     constructor() {
         super("MFA_REQUIRED");
-        this.code = "MFA_REQUIRED";
+        this.type = "MFA_REQUIRED" as any;
     }
 }
 
@@ -58,7 +58,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                     // Check MFA
                     if (user.mfaEnabled) {
+                        console.log("MFA is enabled for user:", email);
                         if (!otp) {
+                            console.log("No OTP provided, throwing MFA_REQUIRED");
                             // Signal to client that MFA is required
                             throw new MfaRequiredError();
                         }
