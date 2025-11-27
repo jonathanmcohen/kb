@@ -38,7 +38,8 @@ export default function LoginPage() {
                     !showMFA && (
                         result.error === "MFA_REQUIRED" ||
                         result.code === "MFA_REQUIRED" ||
-                        result.error?.includes("MFA_REQUIRED")
+                        result.error?.includes("MFA") ||
+                        result.code?.includes("MFA")
                     )
                 ) {
                     setShowMFA(true);

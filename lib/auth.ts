@@ -10,7 +10,7 @@ import bcrypt from "bcryptjs";
 
 class MfaRequiredError extends CredentialsSignin {
     constructor() {
-        super("MFA required");
+        super("MFA_REQUIRED");
         this.code = "MFA_REQUIRED";
     }
 }
