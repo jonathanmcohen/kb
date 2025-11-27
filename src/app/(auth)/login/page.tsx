@@ -34,16 +34,18 @@ export default function LoginPage() {
             if (result?.error) {
                 console.log("Login error result:", result);
                 // Check for MFA_REQUIRED in various places it might appear
-                if (
-                    !showMFA &&
-                    (
-                        result.error === "MFA_REQUIRED" ||
-                        result.code === "MFA_REQUIRED" ||
-                        (result.error === "CredentialsSignin" && result.code === "MFA_REQUIRED") ||
-                        result.error?.includes("MFA") ||
-                        result.code?.includes("MFA")
-                    )
-                ) {
+                const mfaNeeded =
+                    result.error === "MFA_REQUIRED" ||
+                    result.code === "MFA_REQUIRED" ||
+                    (result.error === "CredentialsSignin" && result.code === "MFA_REQUIRED") ||
+                    (result.error === "CredentialsSignin" && result.code === "INVALID_OTP") ||
+                    result.error?.includes("MFA") ||
+                    result.code?.includes("MFA") ||
+                    result.code?.includes("OTP") ||
+                    // Fallback: any CredentialsSignin after first attempt should prompt for OTP
+                    result.error === "CredentialsSignin";
+
+                if (!showMFA && mfaNeeded) {
                     setShowMFA(true);
                     setLoading(false);
                     return;

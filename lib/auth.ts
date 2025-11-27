@@ -71,10 +71,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         }
 
                         if (!user.mfaSecret) {
-                            throw new InvalidOtpError();
+                            throw new MfaRequiredError();
                         }
 
                         const { authenticator } = await import("otplib");
+                        // Allow slight clock drift for TOTPs
+                        authenticator.options = {
+                            ...authenticator.options,
+                            window: 1,
+                        } as typeof authenticator.options;
+
                         const isValid = authenticator.verify({
                             token: otp,
                             secret: user.mfaSecret,
