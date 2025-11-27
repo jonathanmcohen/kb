@@ -78,7 +78,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         const isValid = authenticator.verify({
                             token: otp,
                             secret: user.mfaSecret,
-                            window: 1, // allow slight clock skew
                         });
 
                         if (!isValid) {
