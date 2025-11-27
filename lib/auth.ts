@@ -88,6 +88,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         async session({ session, token }) {
             if (token.sub && session.user) {
                 session.user.id = token.sub;
+
+                // Fetch latest image from DB to ensure it's up to date
+                try {
+                    const user = await prisma.user.findUnique({
+                        where: { id: token.sub },
+                        select: { image: true },
+                    });
+
+                    if (user) {
+                        session.user.image = user.image;
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch user image in session:", error);
+                }
             }
             return session;
         },
