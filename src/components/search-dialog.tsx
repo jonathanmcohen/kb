@@ -17,6 +17,8 @@ interface SearchResult {
     id: string;
     title: string;
     updatedAt: string;
+    snippet?: string | null;
+    rank?: number;
 }
 
 export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
@@ -64,7 +66,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                 <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search by title... (Cmd/Ctrl+K)"
+                        placeholder="Search titles or content... (Cmd/Ctrl+K)"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         className="pl-10"
@@ -102,7 +104,13 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                                     <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium truncate">{doc.title}</p>
-                                        <p className="text-sm text-muted-foreground">
+                                        {doc.snippet && (
+                                            <p
+                                                className="text-sm text-muted-foreground line-clamp-2"
+                                                dangerouslySetInnerHTML={{ __html: doc.snippet }}
+                                            />
+                                        )}
+                                        <p className="text-xs text-muted-foreground">
                                             Updated {new Date(doc.updatedAt).toLocaleDateString()}
                                         </p>
                                     </div>

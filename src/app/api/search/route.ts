@@ -4,32 +4,15 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-// Helper function to extract text from BlockNote JSON content
-function extractTextFromContent(content: unknown): string {
-    if (!content || typeof content !== 'string') return '';
+type SearchRow = {
+    id: string;
+    title: string;
+    updatedAt: Date;
+    snippet: string | null;
+    rank: number;
+};
 
-    try {
-        const blocks = JSON.parse(content);
-        if (!Array.isArray(blocks)) return '';
-
-        return blocks
-            .map((block: { content?: Array<{ text?: string }> }) => {
-                // Extract text from block content
-                if (block.content && Array.isArray(block.content)) {
-                    return block.content
-                        .map((item: { text?: string }) => item.text || '')
-                        .join(' ');
-                }
-                return '';
-            })
-            .join(' ')
-            .trim();
-    } catch {
-        return '';
-    }
-}
-
-// GET search documents
+// GET search documents using Postgres full-text search
 export async function GET(req: NextRequest) {
     try {
         const session = await auth();
@@ -38,32 +21,49 @@ export async function GET(req: NextRequest) {
         }
 
         const { searchParams } = new URL(req.url);
-        const query = searchParams.get("q") || "";
+        const query = searchParams.get("q")?.trim() || "";
 
         if (!query) {
             return NextResponse.json([]);
         }
 
-        // Fetch all user documents
-        const documents = await prisma.document.findMany({
-            where: {
-                userId: session.user.id,
-                isArchived: false,
-            },
-            orderBy: { updatedAt: "desc" },
-        });
+        // Use Postgres full-text search with ranking and snippets.
+        // We search across title (high weight) and content JSON (lower weight).
+        const results = await prisma.$queryRaw<SearchRow[]>`
+            WITH ts_query AS (
+                SELECT COALESCE(
+                    nullif(websearch_to_tsquery('english', ${query}), ''::tsquery),
+                    plainto_tsquery('english', ${query})
+                ) AS query
+            )
+            SELECT
+                d."id",
+                d."title",
+                d."updatedAt",
+                ts_rank(
+                    setweight(to_tsvector('english', coalesce(d."title", '')), 'A') ||
+                    setweight(to_tsvector('english', coalesce((d."content"::text), '')), 'B'),
+                    tsq.query
+                ) AS rank,
+                ts_headline(
+                    'english',
+                    coalesce((d."content"::text), ''),
+                    tsq.query,
+                    'MaxFragments=2, MinWords=5, MaxWords=18, StartSel=<b>, StopSel=</b>'
+                ) AS snippet
+            FROM "Document" d
+            CROSS JOIN ts_query tsq
+            WHERE d."userId" = ${session.user.id}
+              AND d."isArchived" = false
+              AND (
+                  setweight(to_tsvector('english', coalesce(d."title", '')), 'A') ||
+                  setweight(to_tsvector('english', coalesce((d."content"::text), '')), 'B')
+              ) @@ tsq.query
+            ORDER BY rank DESC, d."updatedAt" DESC
+            LIMIT 15;
+        `;
 
-        // Filter by title OR content
-        const filteredDocuments = documents.filter((doc) => {
-            const titleMatch = doc.title.toLowerCase().includes(query.toLowerCase());
-            const contentText = extractTextFromContent(doc.content);
-            const contentMatch = contentText.toLowerCase().includes(query.toLowerCase());
-
-            return titleMatch || contentMatch;
-        });
-
-        // Return top 10 results
-        return NextResponse.json(filteredDocuments.slice(0, 10));
+        return NextResponse.json(results);
     } catch (error) {
         console.error("Search error:", error);
         return NextResponse.json(

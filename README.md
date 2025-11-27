@@ -185,6 +185,18 @@ npx prisma studio
 npx prisma migrate reset
 ```
 
+### Full-Text Search
+
+The search API now uses PostgreSQL full-text search. Add the GIN index to keep it fast:
+
+```sql
+CREATE INDEX IF NOT EXISTS document_search_idx ON "Document"
+USING GIN (
+  setweight(to_tsvector('english', coalesce("title", '')), 'A') ||
+  setweight(to_tsvector('english', coalesce(("content"::text), '')), 'B')
+);
+```
+
 ## Troubleshooting
 
 ### Database Connection Issues
