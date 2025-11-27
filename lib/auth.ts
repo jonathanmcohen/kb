@@ -15,6 +15,13 @@ class MfaRequiredError extends CredentialsSignin {
     }
 }
 
+class InvalidOtpError extends CredentialsSignin {
+    constructor() {
+        super("INVALID_OTP");
+        this.code = "INVALID_OTP";
+    }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
     ...authConfig,
     adapter: PrismaAdapter(prisma),
@@ -59,23 +66,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                     // Check MFA
                     if (user.mfaEnabled) {
-                        console.log("MFA is enabled for user:", email);
                         if (!otp) {
-                            console.log("No OTP provided, throwing MFA_REQUIRED");
-                            // Signal to client that MFA is required
                             throw new MfaRequiredError();
                         }
 
-                        // Verify OTP
-                        if (!user.mfaSecret) return null;
+                        if (!user.mfaSecret) {
+                            throw new InvalidOtpError();
+                        }
 
                         const { authenticator } = await import("otplib");
                         const isValid = authenticator.verify({
                             token: otp,
                             secret: user.mfaSecret,
+                            window: 1, // allow slight clock skew
                         });
 
-                        if (!isValid) return null;
+                        if (!isValid) {
+                            throw new InvalidOtpError();
+                        }
                     }
 
                     return user;

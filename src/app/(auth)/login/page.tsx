@@ -35,9 +35,11 @@ export default function LoginPage() {
                 console.log("Login error result:", result);
                 // Check for MFA_REQUIRED in various places it might appear
                 if (
-                    !showMFA && (
+                    !showMFA &&
+                    (
                         result.error === "MFA_REQUIRED" ||
                         result.code === "MFA_REQUIRED" ||
+                        (result.error === "CredentialsSignin" && result.code === "MFA_REQUIRED") ||
                         result.error?.includes("MFA") ||
                         result.code?.includes("MFA")
                     )
