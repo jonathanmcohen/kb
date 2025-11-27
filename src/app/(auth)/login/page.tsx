@@ -13,8 +13,10 @@ export default function LoginPage() {
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [otp, setOtp] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const [showMFA, setShowMFA] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -25,31 +27,84 @@ export default function LoginPage() {
             const result = await signIn("credentials", {
                 email,
                 password,
+                otp: showMFA ? otp : undefined,
                 redirect: false,
             });
 
             if (result?.error) {
-                if (result.error === "MFA_REQUIRED") {
-                    // Redirect to MFA verification page with email
-                    router.push(`/verify-mfa?email=${encodeURIComponent(email)}`);
-                } else {
-                    setError("Invalid credentials");
+                console.log("Login error result:", result);
+                // Check for MFA_REQUIRED in various places it might appear
+                if (
+                    !showMFA && (
+                        result.error === "MFA_REQUIRED" ||
+                        result.code === "MFA_REQUIRED" ||
+                        result.error?.includes("MFA_REQUIRED")
+                    )
+                ) {
+                    setShowMFA(true);
+                    setLoading(false);
+                    return;
                 }
+
+                setError("Invalid credentials or verification code");
+                setLoading(false);
             } else {
                 router.push("/documents");
                 router.refresh();
             }
         } catch (err) {
-            // Check if it's the custom MFA error thrown from authorize
-            if (err instanceof Error && err.message === "MFA_REQUIRED") {
-                router.push(`/verify-mfa?email=${encodeURIComponent(email)}`);
-                return;
-            }
+            console.error("Login error:", err);
             setError("An error occurred");
-        } finally {
             setLoading(false);
         }
     };
+
+    if (showMFA) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="space-y-1">
+                        <CardTitle className="text-2xl font-bold">Two-Factor Authentication</CardTitle>
+                        <CardDescription>Enter the code from your authenticator app</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="otp">Verification Code</Label>
+                                <Input
+                                    id="otp"
+                                    type="text"
+                                    placeholder="000000"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    className="text-center text-2xl tracking-widest font-mono"
+                                    maxLength={6}
+                                    autoFocus
+                                    required
+                                />
+                            </div>
+                            {error && <p className="text-sm text-red-500">{error}</p>}
+                            <Button type="submit" className="w-full" disabled={loading}>
+                                {loading ? "Verifying..." : "Verify"}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                className="w-full"
+                                onClick={() => {
+                                    setShowMFA(false);
+                                    setOtp("");
+                                    setError("");
+                                }}
+                            >
+                                Back to Login
+                            </Button>
+                        </form>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">

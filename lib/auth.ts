@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { AuthError, CredentialsSignin } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "./auth.config";
@@ -7,6 +7,13 @@ import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+
+class MfaRequiredError extends CredentialsSignin {
+    constructor() {
+        super("MFA required");
+        this.code = "MFA_REQUIRED";
+    }
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
     ...authConfig,
@@ -38,16 +45,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 if (parsedCredentials.success) {
                     const { email, password, otp } = parsedCredentials.data;
 
-                    // If we have an OTP, we're doing MFA verification
-                    // But we need to re-verify password or trust the flow (here we re-verify if password provided, 
-                    // or rely on the fact that we're in a flow where password was just checked - simplified for now 
-                    // to require password again or implement a temporary session store, 
-                    // BUT for simplicity in this stateless auth:
-                    // We will require password + OTP in the second step if we want to be stateless,
-                    // OR we throw a specific error that the client handles.
-
-                    // Let's use the "throw error" approach to signal client to ask for OTP
-
                     const user = await prisma.user.findUnique({ where: { email } });
                     if (!user || !user.password) return null;
 
@@ -63,7 +60,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     if (user.mfaEnabled) {
                         if (!otp) {
                             // Signal to client that MFA is required
-                            throw new Error("MFA_REQUIRED");
+                            throw new MfaRequiredError();
                         }
 
                         // Verify OTP
