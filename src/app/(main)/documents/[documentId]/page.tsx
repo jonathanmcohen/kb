@@ -9,6 +9,7 @@ import { IconPicker } from "@/components/icon-picker";
 import { CoverImagePicker } from "@/components/cover-image-picker";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSession } from "next-auth/react";
 
 interface Document {
     id: string;
@@ -16,9 +17,11 @@ interface Document {
     content: string;
     icon?: string | null;
     coverImage?: string | null;
+    updatedAt?: string;
 }
 
 export default function DocumentPage() {
+    const { data: session } = useSession();
     const params = useParams();
     const documentId = params.documentId as string;
     const queryClient = useQueryClient();
@@ -33,11 +36,24 @@ export default function DocumentPage() {
     });
 
     const [title, setTitle] = useState("");
+    const [isTitleDirty, setIsTitleDirty] = useState(false);
+    const [contentVersion, setContentVersion] = useState(0);
 
-    // Update title when document loads
-    if (document?.title && title === "") {
-        setTitle(document.title);
-    }
+    // Update title when document changes and user isn't actively editing
+    useEffect(() => {
+        if (document?.title && !isTitleDirty) {
+            setTitle(document.title);
+        }
+        if (document?.title === title) {
+            setIsTitleDirty(false);
+        }
+    }, [document?.title, isTitleDirty, title]);
+
+    // Reset content version when switching documents
+    useEffect(() => {
+        setContentVersion(0);
+        setIsTitleDirty(false);
+    }, [documentId]);
 
     const { mutate: updateDocument } = useMutation({
         mutationFn: async (data: Partial<Document>) => {
@@ -67,6 +83,7 @@ export default function DocumentPage() {
     }, [title, document?.title]); // Only depend on title and document.title
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setIsTitleDirty(true);
         setTitle(e.target.value);
     };
 
@@ -90,6 +107,41 @@ export default function DocumentPage() {
     const handleRemoveIcon = () => {
         updateDocument({ icon: null });
     };
+
+    // Listen for server-sent document updates (basic real-time sync)
+    useEffect(() => {
+        if (!documentId) return;
+
+        const eventSource = new EventSource(`/api/documents/${documentId}/stream`);
+
+        eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data?.type === "document:update") {
+                    if (data.editedBy && data.editedBy === session?.user?.id) {
+                        return;
+                    }
+                    const updatedDoc: Document = data.payload;
+
+                    const current = queryClient.getQueryData<Document>(["document", documentId]);
+                    queryClient.setQueryData(["document", documentId], () => updatedDoc);
+                    setTitle(updatedDoc.title);
+                    setIsTitleDirty(false);
+                    if (current?.content !== updatedDoc.content) {
+                        setContentVersion((v) => v + 1); // Remount editor to reflect remote content
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to parse SSE message", error);
+            }
+        };
+
+        eventSource.onerror = () => {
+            eventSource.close();
+        };
+
+        return () => eventSource.close();
+    }, [documentId, queryClient, session?.user?.id]);
 
     if (!document) {
         return (
@@ -162,7 +214,7 @@ export default function DocumentPage() {
 
                 {/* Editor */}
                 <Editor
-                    key={document.id} // Force remount when switching documents
+                    key={`${document.id}-${contentVersion}`} // Remount on remote content updates
                     onChange={handleContentChange}
                     initialContent={document.content as string | undefined}
                 />

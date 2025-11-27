@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { broadcast } from "@/lib/sse";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,13 @@ export async function PATCH(
         const updated = await prisma.document.update({
             where: { id: documentId },
             data,
+        });
+
+        // Notify other clients viewing this document
+        broadcast(documentId, {
+            type: "document:update",
+            payload: updated,
+            editedBy: session.user.id,
         });
 
         return NextResponse.json(updated);
