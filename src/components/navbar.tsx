@@ -29,7 +29,7 @@ export function Navbar() {
         .toUpperCase() || "U";
 
     return (
-        <div className="h-14 border-b px-4 flex items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="h-14 border-b px-4 flex items-center justify-between bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
             <div className="flex items-center gap-4">
                 <h1 className="text-xl font-bold">Knowledge Base</h1>
                 <Button variant="ghost" size="sm" onClick={() => setSearchOpen(true)}>
