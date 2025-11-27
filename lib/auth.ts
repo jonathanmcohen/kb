@@ -9,7 +9,10 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 
 class MfaRequiredError extends CredentialsSignin {
-    code = "MFA_REQUIRED";
+    constructor() {
+        super("MFA_REQUIRED");
+        this.code = "MFA_REQUIRED";
+    }
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
