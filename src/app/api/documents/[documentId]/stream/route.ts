@@ -53,7 +53,7 @@ export async function GET(
             };
 
             // Handle client disconnect
-            const abortSignal: AbortSignal | undefined = (req as any).signal;
+            const abortSignal: AbortSignal | undefined = req.signal;
             abortSignal?.addEventListener("abort", close);
         },
     });
