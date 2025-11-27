@@ -1,4 +1,4 @@
-import NextAuth, { AuthError, CredentialsSignin } from "next-auth";
+import NextAuth, { AuthError } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "./auth.config";
@@ -11,6 +11,7 @@ import bcrypt from "bcryptjs";
 class MfaRequiredError extends AuthError {
     constructor() {
         super("MFA_REQUIRED");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this.type = "MFA_REQUIRED" as any;
     }
 }
