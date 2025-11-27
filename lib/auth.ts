@@ -1,4 +1,4 @@
-import NextAuth, { AuthError } from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "./auth.config";
@@ -8,12 +8,8 @@ import GitHub from "next-auth/providers/github";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
-class MfaRequiredError extends AuthError {
-    constructor() {
-        super("MFA_REQUIRED");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        this.type = "MFA_REQUIRED" as any;
-    }
+class MfaRequiredError extends CredentialsSignin {
+    code = "MFA_REQUIRED";
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -33,6 +29,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             credentials: {
                 email: { label: "Email", type: "email" },
                 password: { label: "Password", type: "password" },
+                otp: { label: "One-time code", type: "text" },
             },
             authorize: async (credentials) => {
                 const parsedCredentials = z
