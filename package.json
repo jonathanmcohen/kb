@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "postinstall": "patch-package && node scripts/ensure-swc-helpers-alias.js"
+    "postinstall": "patch-package && [ -f scripts/ensure-swc-helpers-alias.js ] && node scripts/ensure-swc-helpers-alias.js || true"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
