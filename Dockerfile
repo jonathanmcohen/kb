@@ -53,6 +53,10 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Ensure pdfkit bundled fonts are available in the standalone output
+RUN mkdir -p /app/.next/standalone/node_modules/pdfkit/js/data
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pdfkit/js/data /app/.next/standalone/node_modules/pdfkit/js/data
+
 # Copy all node_modules (simpler and more reliable than cherry-picking dependencies)
 # COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
