@@ -22,6 +22,7 @@ model User {
   sessions      Session[]
   documents     Document[]
   comments      Comment[]
+  documentVersions DocumentVersion[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
