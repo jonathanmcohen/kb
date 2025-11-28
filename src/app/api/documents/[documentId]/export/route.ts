@@ -35,11 +35,15 @@ function blockToText(block: ParsedBlock): string {
 }
 
 async function fetchImageBuffer(url: string, origin: string): Promise<Buffer | null> {
-    const resolved = url.startsWith("http") ? url : `${origin}${url}`;
-    const res = await fetch(resolved);
-    if (!res.ok) return null;
-    const arr = await res.arrayBuffer();
-    return Buffer.from(arr);
+    try {
+        const resolved = url.startsWith("http") ? url : `${origin}${url}`;
+        const res = await fetch(resolved);
+        if (!res.ok) return null;
+        const arr = await res.arrayBuffer();
+        return Buffer.from(arr);
+    } catch {
+        return null;
+    }
 }
 
 function blockText(block: ParsedBlock): string {
