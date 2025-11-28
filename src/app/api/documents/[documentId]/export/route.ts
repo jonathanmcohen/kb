@@ -76,9 +76,9 @@ function blocksToMarkdown(blocks: ParsedBlock[]): string {
 
 function createPdf(title: string, body: string) {
     const doc = new PDFDocument({ margin: 50, size: "A4" });
-    const chunks: Uint8Array[] = [];
+    const chunks: Buffer[] = [];
 
-    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
 
     doc.fontSize(20).text(title || "Untitled", { underline: true });
     doc.moveDown();
@@ -120,7 +120,8 @@ export async function GET(
 
         if (format === "pdf") {
             const pdfBuffer = await createPdf(document.title, plainText);
-            return new NextResponse(pdfBuffer, {
+            const pdfBytes = new Uint8Array(pdfBuffer);
+            return new NextResponse(pdfBytes, {
                 headers: {
                     "Content-Type": "application/pdf",
                     "Content-Disposition": `attachment; filename="${document.title || "document"}.pdf"`,

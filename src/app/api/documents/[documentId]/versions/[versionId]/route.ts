@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { broadcast } from "@/lib/sse";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,8 @@ export async function GET(
 ) {
     try {
         const session = await auth();
-        if (!session?.user?.id) {
+        const userId = session?.user?.id;
+        if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -23,7 +25,7 @@ export async function GET(
             select: { userId: true },
         });
 
-        if (!document || document.userId !== session.user.id) {
+        if (!document || document.userId !== userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -55,7 +57,8 @@ export async function POST(
 ) {
     try {
         const session = await auth();
-        if (!session?.user?.id) {
+        const userId = session?.user?.id;
+        if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -65,7 +68,7 @@ export async function POST(
             where: { id: documentId },
         });
 
-        if (!document || document.userId !== session.user.id) {
+        if (!document || document.userId !== userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -82,9 +85,9 @@ export async function POST(
             await tx.documentVersion.create({
                 data: {
                     documentId,
-                    userId: session.user.id,
+                    userId,
                     title: document.title,
-                    content: document.content,
+                    content: document.content ?? Prisma.JsonNull,
                     label: "Before restore",
                 },
             });
@@ -93,7 +96,7 @@ export async function POST(
                 where: { id: documentId },
                 data: {
                     title: version.title,
-                    content: version.content,
+                    content: version.content ?? Prisma.JsonNull,
                 },
             });
         });
@@ -101,7 +104,7 @@ export async function POST(
         broadcast(documentId, {
             type: "document:update",
             payload: restored,
-            editedBy: session.user.id,
+            editedBy: userId,
         });
 
         return NextResponse.json(restored);

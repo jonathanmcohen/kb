@@ -19,7 +19,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface Document {
+interface DocumentData {
     id: string;
     title: string;
     content: string;
@@ -45,7 +45,7 @@ export default function DocumentPage() {
     const params = useParams();
     const documentId = params.documentId as string;
     const queryClient = useQueryClient();
-    const { data: document } = useQuery<Document>({
+    const { data: doc } = useQuery<DocumentData>({
         queryKey: ["document", documentId],
         queryFn: async () => {
             const res = await fetch(`/api/documents/${documentId}`);
@@ -77,13 +77,13 @@ export default function DocumentPage() {
 
     // Update title when document changes and user isn't actively editing
     useEffect(() => {
-        if (document?.title && !isTitleDirty) {
-            setTitle(document.title);
+        if (doc?.title && !isTitleDirty) {
+            setTitle(doc.title);
         }
-        if (document?.title === title) {
+        if (doc?.title === title) {
             setIsTitleDirty(false);
         }
-    }, [document?.title, isTitleDirty, title]);
+    }, [doc?.title, isTitleDirty, title]);
 
     // Reset content version when switching documents
     useEffect(() => {
@@ -92,7 +92,7 @@ export default function DocumentPage() {
     }, [documentId]);
 
     const { mutate: updateDocument } = useMutation({
-        mutationFn: async (data: Partial<Document>) => {
+        mutationFn: async (data: Partial<DocumentData>) => {
             const res = await fetch(`/api/documents/${documentId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -108,7 +108,7 @@ export default function DocumentPage() {
 
     // Debounce title updates
     useEffect(() => {
-        if (!document || title === "" || title === document.title) return;
+        if (!doc || title === "" || title === doc.title) return;
 
         const timeout = setTimeout(() => {
             updateDocument({ title });
@@ -116,7 +116,7 @@ export default function DocumentPage() {
 
         return () => clearTimeout(timeout);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [title, document?.title]); // Only depend on title and document.title
+    }, [title, doc?.title]); // Only depend on title and document.title
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setIsTitleDirty(true);
@@ -152,7 +152,7 @@ export default function DocumentPage() {
             if (!res.ok) throw new Error("Failed to restore version");
             return res.json();
         },
-        onSuccess: (updatedDoc: Document) => {
+        onSuccess: (updatedDoc: DocumentData) => {
             queryClient.setQueryData(["document", documentId], updatedDoc);
             setContentVersion((v) => v + 1);
             setTitle(updatedDoc.title);
@@ -182,7 +182,7 @@ export default function DocumentPage() {
     });
 
     const handleExport = async (format: "markdown" | "pdf") => {
-        if (!documentId) return;
+        if (!documentId || typeof window === "undefined" || typeof document === "undefined") return;
         try {
             setIsExporting(true);
             const res = await fetch(`/api/documents/${documentId}/export?format=${format}`);
@@ -218,9 +218,9 @@ export default function DocumentPage() {
                     if (data.editedBy && data.editedBy === session?.user?.id) {
                         return;
                     }
-                    const updatedDoc: Document = data.payload;
+                    const updatedDoc: DocumentData = data.payload;
 
-                    const current = queryClient.getQueryData<Document>(["document", documentId]);
+                    const current = queryClient.getQueryData<DocumentData>(["document", documentId]);
                     queryClient.setQueryData(["document", documentId], () => updatedDoc);
                     setTitle(updatedDoc.title);
                     setIsTitleDirty(false);
@@ -240,7 +240,7 @@ export default function DocumentPage() {
         return () => eventSource.close();
     }, [documentId, queryClient, session?.user?.id]);
 
-    if (!document) {
+    if (!doc) {
         return (
             <div className="flex items-center justify-center h-full">
                 <p className="text-muted-foreground">Loading...</p>
@@ -251,11 +251,11 @@ export default function DocumentPage() {
     return (
         <div className="h-full overflow-y-auto">
             {/* Cover Image */}
-            {document.coverImage && (
+            {doc.coverImage && (
                 <div className="h-[40vh] w-full relative group">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                        src={document.coverImage}
+                        src={doc.coverImage}
                         alt="Cover"
                         className="w-full h-full object-cover"
                     />
@@ -315,17 +315,17 @@ export default function DocumentPage() {
 
                 {/* Icon and Cover Controls */}
                 <div className="flex items-center gap-2 mb-8">
-                    <IconPicker currentIcon={document.icon} onIconChange={handleIconChange}>
+                    <IconPicker currentIcon={doc.icon} onIconChange={handleIconChange}>
                         <Button variant="ghost" size="sm">
-                            {document.icon ? (
-                                <span className="text-5xl">{document.icon}</span>
+                            {doc.icon ? (
+                                <span className="text-5xl">{doc.icon}</span>
                             ) : (
                                 <span className="text-muted-foreground text-sm">🙂 Add icon</span>
                             )}
                         </Button>
                     </IconPicker>
 
-                    {document.icon && (
+                    {doc.icon && (
                         <Button
                             variant="ghost"
                             size="sm"
@@ -336,7 +336,7 @@ export default function DocumentPage() {
                         </Button>
                     )}
 
-                    {!document.coverImage && (
+                    {!doc.coverImage && (
                         <CoverImagePicker onCoverChange={handleCoverChange} />
                     )}
                 </div>
@@ -351,9 +351,9 @@ export default function DocumentPage() {
 
                 {/* Editor */}
                 <Editor
-                    key={`${document.id}-${contentVersion}`} // Remount on remote content updates
+                    key={`${doc.id}-${contentVersion}`} // Remount on remote content updates
                     onChange={handleContentChange}
-                    initialContent={document.content as string | undefined}
+                    initialContent={doc.content as string | undefined}
                 />
             </div>
 
