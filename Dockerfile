@@ -7,6 +7,9 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
+# Copy patch-package assets needed during install
+COPY patches ./patches
+COPY scripts/ensure-swc-helpers-alias.js ./scripts/
 RUN npm ci
 
 # Rebuild the source code only when needed
