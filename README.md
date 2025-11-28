@@ -13,6 +13,7 @@ A Notion-like knowledge base with block-based editing, real-time collaboration, 
 - ✅ **Admin Portal**: Dashboard with metrics and user management
 - 🚧 **S3 Uploads**: Image and file upload support (API ready)
 - 🚧 **External API**: REST API with token authentication (structure ready)
+- ✅ **Version History**: Automatic snapshots with restore
 - ✅ **Docker**: Containerized deployment with GitHub Actions CI/CD
 
 ## Tech Stack
@@ -197,6 +198,25 @@ USING GIN (
 );
 ```
 
+### Version History
+
+Document edits now create snapshots you can browse and restore. Run a migration or apply the table manually:
+
+```sql
+CREATE TABLE IF NOT EXISTS "DocumentVersion" (
+  "id" text PRIMARY KEY,
+  "documentId" text NOT NULL REFERENCES "Document"("id") ON DELETE CASCADE,
+  "userId" text NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "title" text NOT NULL,
+  "content" jsonb,
+  "createdAt" timestamp with time zone NOT NULL DEFAULT now(),
+  "label" text
+);
+
+CREATE INDEX IF NOT EXISTS "DocumentVersion_documentId_idx" ON "DocumentVersion" ("documentId");
+CREATE INDEX IF NOT EXISTS "DocumentVersion_userId_idx" ON "DocumentVersion" ("userId");
+```
+
 ## Troubleshooting
 
 ### Database Connection Issues
@@ -211,11 +231,11 @@ USING GIN (
 
 ## Roadmap
 
-- [ ] Full-text search with PostgreSQL
+- [x] Full-text search with PostgreSQL
 - [ ] Real-time collaboration with WebSockets
 - [ ] S3 integration for file uploads
 - [ ] External API with token authentication
-- [ ] Page history and versioning
+- [x] Page history and versioning
 - [ ] Export to Markdown/PDF
 - [ ] Mobile responsive improvements
 

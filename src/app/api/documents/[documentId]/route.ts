@@ -71,9 +71,36 @@ export async function PATCH(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const updated = await prisma.document.update({
-            where: { id: documentId },
-            data,
+        const shouldVersion = (() => {
+            let changed = false;
+            if (data.title !== undefined && data.title !== document.title) {
+                changed = true;
+            }
+            if (data.content !== undefined) {
+                const incoming = JSON.stringify(data.content);
+                const existing = JSON.stringify(document.content);
+                if (incoming !== existing) changed = true;
+            }
+            return changed;
+        })();
+
+        const updated = await prisma.$transaction(async (tx) => {
+            if (shouldVersion) {
+                await tx.documentVersion.create({
+                    data: {
+                        documentId,
+                        userId: session.user.id,
+                        title: document.title,
+                        content: document.content,
+                        label: "Auto snapshot",
+                    },
+                });
+            }
+
+            return tx.document.update({
+                where: { id: documentId },
+                data,
+            });
         });
 
         // Notify other clients viewing this document

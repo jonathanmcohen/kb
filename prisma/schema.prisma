@@ -78,6 +78,7 @@ model Document {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   comments    Comment[]
+  versions    DocumentVersion[]
   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -98,6 +99,21 @@ model Comment {
   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@index([documentId])
+  @@index([userId])
+}
+
+model DocumentVersion {
+  id          String   @id @default(cuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  content     Json?
+  createdAt   DateTime @default(now())
+  label       String?
 
   @@index([documentId])
   @@index([userId])

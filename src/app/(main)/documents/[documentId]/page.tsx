@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Editor } from "@/components/editor/editor";
 import { IconPicker } from "@/components/icon-picker";
 import { CoverImagePicker } from "@/components/cover-image-picker";
-import { X } from "lucide-react";
+import { X, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSession } from "next-auth/react";
 
 interface Document {
@@ -18,6 +19,18 @@ interface Document {
     icon?: string | null;
     coverImage?: string | null;
     updatedAt?: string;
+}
+
+interface DocumentVersion {
+    id: string;
+    createdAt: string;
+    title: string;
+    label?: string | null;
+    user?: {
+        id: string;
+        name?: string | null;
+        email?: string | null;
+    };
 }
 
 export default function DocumentPage() {
@@ -38,6 +51,17 @@ export default function DocumentPage() {
     const [title, setTitle] = useState("");
     const [isTitleDirty, setIsTitleDirty] = useState(false);
     const [contentVersion, setContentVersion] = useState(0);
+    const [historyOpen, setHistoryOpen] = useState(false);
+
+    const { data: versions, isLoading: versionsLoading } = useQuery<DocumentVersion[]>({
+        queryKey: ["versions", documentId],
+        queryFn: async () => {
+            const res = await fetch(`/api/documents/${documentId}/versions`);
+            if (!res.ok) throw new Error("Failed to fetch versions");
+            return res.json();
+        },
+        enabled: historyOpen && !!documentId,
+    });
 
     // Update title when document changes and user isn't actively editing
     useEffect(() => {
@@ -108,6 +132,23 @@ export default function DocumentPage() {
         updateDocument({ icon: null });
     };
 
+    const { mutate: restoreVersion, isPending: restoringVersion } = useMutation({
+        mutationFn: async (versionId: string) => {
+            const res = await fetch(`/api/documents/${documentId}/versions/${versionId}`, {
+                method: "POST",
+            });
+            if (!res.ok) throw new Error("Failed to restore version");
+            return res.json();
+        },
+        onSuccess: (updatedDoc: Document) => {
+            queryClient.setQueryData(["document", documentId], updatedDoc);
+            setContentVersion((v) => v + 1);
+            setTitle(updatedDoc.title);
+            setIsTitleDirty(false);
+            setHistoryOpen(false);
+        },
+    });
+
     // Listen for server-sent document updates (basic real-time sync)
     useEffect(() => {
         if (!documentId) return;
@@ -176,6 +217,18 @@ export default function DocumentPage() {
             )}
 
             <div className="max-w-3xl mx-auto px-12 py-8">
+                <div className="flex justify-end mb-4">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setHistoryOpen(true)}
+                        className="gap-2"
+                    >
+                        <History className="h-4 w-4" />
+                        History
+                    </Button>
+                </div>
+
                 {/* Icon and Cover Controls */}
                 <div className="flex items-center gap-2 mb-8">
                     <IconPicker currentIcon={document.icon} onIconChange={handleIconChange}>
@@ -219,6 +272,57 @@ export default function DocumentPage() {
                     initialContent={document.content as string | undefined}
                 />
             </div>
+
+            <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+                <DialogContent className="sm:max-w-[640px]">
+                    <DialogHeader>
+                        <DialogTitle>Version history</DialogTitle>
+                        <DialogDescription>
+                            Restore a previous snapshot of this document.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="max-h-[420px] overflow-y-auto space-y-3">
+                        {versionsLoading && (
+                            <p className="text-sm text-muted-foreground">Loading versions...</p>
+                        )}
+
+                        {!versionsLoading && (!versions || versions.length === 0) && (
+                            <p className="text-sm text-muted-foreground">
+                                No versions yet. Edits will create snapshots automatically.
+                            </p>
+                        )}
+
+                        {versions && versions.length > 0 && versions.map((version) => (
+                            <div
+                                key={version.id}
+                                className="flex items-center justify-between rounded-lg border p-3"
+                            >
+                                <div className="space-y-1">
+                                    <p className="font-medium">
+                                        {version.label || "Snapshot"}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {new Date(version.createdAt).toLocaleString()}
+                                        {version.user?.name ? ` · ${version.user.name}` : ""}
+                                    </p>
+                                    <p className="text-sm truncate text-muted-foreground">
+                                        Title: {version.title}
+                                    </p>
+                                </div>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    disabled={restoringVersion}
+                                    onClick={() => restoreVersion(version.id)}
+                                >
+                                    Restore
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
