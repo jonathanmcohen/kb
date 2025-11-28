@@ -34,55 +34,105 @@ function blockToText(block: ParsedBlock): string {
     return [text, childText].filter(Boolean).join("\n");
 }
 
-function blocksToPlainText(blocks: ParsedBlock[]): string {
-    return blocks.map(blockToText).filter(Boolean).join("\n\n");
+async function fetchImageBuffer(url: string, origin: string): Promise<Buffer | null> {
+    const resolved = url.startsWith("http") ? url : `${origin}${url}`;
+    const res = await fetch(resolved);
+    if (!res.ok) return null;
+    const arr = await res.arrayBuffer();
+    return Buffer.from(arr);
 }
 
-function blockToMarkdown(block: ParsedBlock): string {
-    const rawText = (block.content || [])
+function blockText(block: ParsedBlock): string {
+    return (block.content || [])
         .map((c) => c.text || "")
         .join(" ")
         .trim();
+}
 
-    const childrenMd = (block.children || []).map(blockToMarkdown).filter(Boolean).join("\n");
+async function renderBlocksToPdf(doc: PDFDocument, blocks: ParsedBlock[], origin: string, indent = 0) {
+    for (const block of blocks) {
+        const text = blockText(block);
+        const children = block.children || [];
+        const options = { indent };
 
-    switch (block.type) {
-        case "heading":
-        case "heading1":
-            return `# ${rawText}\n${childrenMd}`;
-        case "heading2":
-            return `## ${rawText}\n${childrenMd}`;
-        case "heading3":
-            return `### ${rawText}\n${childrenMd}`;
-        case "bulletListItem":
-        case "bullet_list":
-        case "listItem":
-            return `- ${rawText}${childrenMd ? `\n${childrenMd}` : ""}`;
-        case "numberListItem":
-        case "ordered_list":
-            return `1. ${rawText}${childrenMd ? `\n${childrenMd}` : ""}`;
-        case "quote":
-            return rawText ? `> ${rawText}` : "";
-        case "codeBlock":
-            return `\n\`\`\`\n${rawText}\n\`\`\`\n`;
-        default:
-            return rawText || childrenMd;
+        switch (block.type) {
+            case "heading":
+            case "heading1":
+                doc.font("Helvetica-Bold").fontSize(22).text(text || "", options);
+                doc.moveDown(0.5);
+                break;
+            case "heading2":
+                doc.font("Helvetica-Bold").fontSize(18).text(text || "", options);
+                doc.moveDown(0.4);
+                break;
+            case "heading3":
+                doc.font("Helvetica-Bold").fontSize(16).text(text || "", options);
+                doc.moveDown(0.3);
+                break;
+            case "bulletListItem":
+            case "bullet_list":
+            case "listItem":
+                doc.font("Helvetica").fontSize(12).text(`• ${text}`, options);
+                break;
+            case "numberListItem":
+            case "ordered_list":
+                doc.font("Helvetica").fontSize(12).text(`1. ${text}`, options);
+                break;
+            case "quote":
+                doc.font("Helvetica-Oblique").fontSize(12).text(text || "", { indent: indent + 12 });
+                break;
+            case "codeBlock":
+                doc.font("Courier").fontSize(10).text(text || "", {
+                    indent,
+                    lineGap: 2,
+                });
+                doc.moveDown(0.2);
+                doc.font("Helvetica").fontSize(12);
+                break;
+            case "image": {
+                const props = (block as ParsedBlock & { props?: { url?: string; src?: string } }).props;
+                const url = props?.url || props?.src;
+                if (url) {
+                    const buf = await fetchImageBuffer(url, origin);
+                    if (buf) {
+                        try {
+                            doc.image(buf, {
+                                fit: [doc.page.width - doc.page.margins.left - doc.page.margins.right, 320],
+                                align: "center",
+                            });
+                            doc.moveDown(0.3);
+                        } catch {
+                            doc.font("Helvetica").fontSize(12).text(text || url, options);
+                        }
+                        break;
+                    }
+                }
+                doc.font("Helvetica").fontSize(12).text(text || "", options);
+                break;
+            }
+            default:
+                doc.font("Helvetica").fontSize(12).text(text || "", options);
+        }
+
+        if (children.length) {
+            await renderBlocksToPdf(doc, children, origin, indent + 12);
+        }
+
+        if (block.type && block.type.startsWith("heading")) {
+            doc.moveDown(0.2);
+        }
     }
 }
 
-function blocksToMarkdown(blocks: ParsedBlock[]): string {
-    return blocks.map(blockToMarkdown).filter(Boolean).join("\n\n");
-}
-
-function createPdf(title: string, body: string) {
+async function createPdf(title: string, blocks: ParsedBlock[], origin: string) {
     const doc = new PDFDocument({ margin: 50, size: "A4" });
     const chunks: Buffer[] = [];
 
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
 
-    doc.fontSize(20).text(title || "Untitled", { underline: true });
+    doc.font("Helvetica-Bold").fontSize(20).text(title || "Untitled", { underline: true });
     doc.moveDown();
-    doc.fontSize(12).text(body || "", { lineGap: 4 });
+    await renderBlocksToPdf(doc, blocks, origin);
     doc.end();
 
     return new Promise<Buffer>((resolve) => {
@@ -115,11 +165,11 @@ export async function GET(
         }
 
         const blocks = parseBlocks(document.content);
-        const plainText = blocksToPlainText(blocks);
-        const markdownBody = blocksToMarkdown(blocks) || plainText;
+        const origin = new URL(req.url).origin;
+        const markdownBody = blockToText({ content: [{ text: document.title || "" }], children: blocks });
 
         if (format === "pdf") {
-            const pdfBuffer = await createPdf(document.title, plainText);
+            const pdfBuffer = await createPdf(document.title, blocks, origin);
             const pdfBytes = new Uint8Array(pdfBuffer);
             return new NextResponse(pdfBytes, {
                 headers: {
