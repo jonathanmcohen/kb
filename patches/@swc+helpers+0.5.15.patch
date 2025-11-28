@@ -1,0 +1,13 @@
+diff --git a/node_modules/@swc/helpers/esm/index.js b/node_modules/@swc/helpers/esm/index.js
+index fe51100..9f970d2 100644
+--- a/node_modules/@swc/helpers/esm/index.js
++++ b/node_modules/@swc/helpers/esm/index.js
+@@ -2,6 +2,8 @@
+ /* To modify this file, please run the `npm run build` command instead. */
+ 
+ export { _ as _apply_decorated_descriptor } from "./_apply_decorated_descriptor.js";
++// Alias for libraries expecting the legacy named export
++export { _ as applyDecoratedDescriptor } from "./_apply_decorated_descriptor.js";
+ export { _ as _apply_decs_2203_r } from "./_apply_decs_2203_r.js";
+ export { _ as _array_like_to_array } from "./_array_like_to_array.js";
+ export { _ as _array_with_holes } from "./_array_with_holes.js";
