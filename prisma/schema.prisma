@@ -69,6 +69,8 @@ model Document {
   icon        String?
   isPublished Boolean   @default(false)
   isArchived  Boolean   @default(false) // Trash
+  shareToken     String? @unique
+  shareExpiresAt DateTime?
   
   parentId    String?
   parent      Document? @relation("DocumentHierarchy", fields: [parentId], references: [id])

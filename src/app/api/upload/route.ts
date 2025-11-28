@@ -6,6 +6,15 @@ import sharp from "sharp";
 
 export const dynamic = "force-dynamic";
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20MB
+const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const ALLOWED_FILE_TYPES = [
+    ...ALLOWED_IMAGE_TYPES,
+    "application/pdf",
+    "text/plain",
+];
+
 // POST - Upload file (proxy to S3/MinIO)
 export async function POST(req: NextRequest) {
     try {
@@ -22,6 +31,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "No file provided" }, { status: 400 });
         }
 
+        const isImage = file.type.startsWith("image/");
+        if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+            return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
+        }
+
+        if ((isImage && file.size > MAX_IMAGE_BYTES) || (!isImage && file.size > MAX_FILE_BYTES)) {
+            return NextResponse.json({ error: "File too large" }, { status: 400 });
+        }
+
         const bucket = process.env.S3_BUCKET || "kb-uploads";
         const bytes = await file.arrayBuffer() as ArrayBuffer;
         const buffer = Buffer.from(bytes);
@@ -32,7 +50,7 @@ export async function POST(req: NextRequest) {
         let originalKey: string | null = null;
 
         // Check if it's an image
-        if (file.type.startsWith("image/")) {
+        if (isImage) {
             try {
                 // 1. Upload Original
                 originalKey = key.replace(/(\.[\w\d_-]+)$/i, '_original$1');

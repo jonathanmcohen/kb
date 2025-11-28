@@ -14,6 +14,7 @@ A Notion-like knowledge base with block-based editing, real-time collaboration, 
 - 🚧 **S3 Uploads**: Image and file upload support (API ready)
 - 🚧 **External API**: REST API with token authentication (structure ready)
 - ✅ **Version History**: Automatic snapshots with restore
+- ✅ **Exports & Sharing**: Markdown/PDF export and time-limited share links
 - ✅ **Docker**: Containerized deployment with GitHub Actions CI/CD
 
 ## Tech Stack
@@ -217,6 +218,24 @@ CREATE INDEX IF NOT EXISTS "DocumentVersion_documentId_idx" ON "DocumentVersion"
 CREATE INDEX IF NOT EXISTS "DocumentVersion_userId_idx" ON "DocumentVersion" ("userId");
 ```
 
+### Share Links & Export
+
+Document share links and exports rely on new columns on `Document`. Apply via Prisma migration or run:
+
+```sql
+ALTER TABLE "Document"
+    ADD COLUMN IF NOT EXISTS "shareToken" text UNIQUE,
+    ADD COLUMN IF NOT EXISTS "shareExpiresAt" timestamp with time zone;
+```
+
+Exports:
+- `GET /api/documents/:id/export?format=markdown|pdf` (auth required) downloads Markdown or PDF.
+- UI: open a document → Export button → choose Markdown/PDF.
+
+Share links:
+- `POST /api/documents/:id/share` with `{ "expiresInHours": 24 }` generates a link; UI button available on document page.
+- Public view: `/share/:token` (read-only).
+
 ## Troubleshooting
 
 ### Database Connection Issues
@@ -236,7 +255,7 @@ CREATE INDEX IF NOT EXISTS "DocumentVersion_userId_idx" ON "DocumentVersion" ("u
 - [ ] S3 integration for file uploads
 - [ ] External API with token authentication
 - [x] Page history and versioning
-- [ ] Export to Markdown/PDF
+- [x] Export to Markdown/PDF
 - [ ] Mobile responsive improvements
 
 ## License

@@ -7,10 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Editor } from "@/components/editor/editor";
 import { IconPicker } from "@/components/icon-picker";
 import { CoverImagePicker } from "@/components/cover-image-picker";
-import { X, History } from "lucide-react";
+import { X, History, Share2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSession } from "next-auth/react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Document {
     id: string;
@@ -52,6 +59,11 @@ export default function DocumentPage() {
     const [isTitleDirty, setIsTitleDirty] = useState(false);
     const [contentVersion, setContentVersion] = useState(0);
     const [historyOpen, setHistoryOpen] = useState(false);
+    const [shareOpen, setShareOpen] = useState(false);
+    const [shareLink, setShareLink] = useState<string | null>(null);
+    const [expiresInHours, setExpiresInHours] = useState(24 * 7);
+    const [shareError, setShareError] = useState<string | null>(null);
+    const [isExporting, setIsExporting] = useState(false);
 
     const { data: versions, isLoading: versionsLoading } = useQuery<DocumentVersion[]>({
         queryKey: ["versions", documentId],
@@ -149,6 +161,50 @@ export default function DocumentPage() {
         },
     });
 
+    const { mutate: createShareLink, isPending: creatingShare } = useMutation({
+        mutationFn: async (hours: number) => {
+            const res = await fetch(`/api/documents/${documentId}/share`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ expiresInHours: hours }),
+            });
+            if (!res.ok) throw new Error("Failed to create share link");
+            return res.json();
+        },
+        onSuccess: (data) => {
+            const base = typeof window !== "undefined" ? window.location.origin : "";
+            setShareLink(`${base}/share/${data.shareToken}`);
+            setShareError(null);
+        },
+        onError: () => {
+            setShareError("Could not create share link. Please try again.");
+        },
+    });
+
+    const handleExport = async (format: "markdown" | "pdf") => {
+        if (!documentId) return;
+        try {
+            setIsExporting(true);
+            const res = await fetch(`/api/documents/${documentId}/export?format=${format}`);
+            if (!res.ok) {
+                throw new Error("Failed to export");
+            }
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = format === "pdf" ? `${title || "document"}.pdf` : `${title || "document"}.md`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     // Listen for server-sent document updates (basic real-time sync)
     useEffect(() => {
         if (!documentId) return;
@@ -217,7 +273,35 @@ export default function DocumentPage() {
             )}
 
             <div className="max-w-3xl mx-auto px-12 py-8">
-                <div className="flex justify-end mb-4">
+                <div className="flex justify-end gap-2 mb-4">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShareOpen(true)}
+                        className="gap-2"
+                    >
+                        <Share2 className="h-4 w-4" />
+                        Share
+                    </Button>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-2">
+                                <Download className="h-4 w-4" />
+                                Export
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Download</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleExport("markdown")} disabled={isExporting}>
+                                Markdown (.md)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleExport("pdf")} disabled={isExporting}>
+                                PDF (.pdf)
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <Button
                         variant="outline"
                         size="sm"
@@ -320,6 +404,72 @@ export default function DocumentPage() {
                                 </Button>
                             </div>
                         ))}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+                <DialogContent className="sm:max-w-[480px]">
+                    <DialogHeader>
+                        <DialogTitle>Create share link</DialogTitle>
+                        <DialogDescription>
+                            Generate a time-limited link to view this document.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">
+                                Expiration (hours)
+                            </label>
+                            <Input
+                                type="number"
+                                min={1}
+                                max={24 * 30}
+                                value={expiresInHours}
+                                onChange={(e) => setExpiresInHours(Number(e.target.value))}
+                            />
+                        </div>
+
+                        {shareError && (
+                            <p className="text-sm text-destructive">{shareError}</p>
+                        )}
+
+                        {shareLink ? (
+                            <div className="space-y-2">
+                                <p className="text-sm text-muted-foreground">Share link</p>
+                                <div className="flex items-center gap-2">
+                                    <Input value={shareLink} readOnly />
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(shareLink);
+                                        }}
+                                    >
+                                        Copy
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : null}
+
+                        <div className="flex justify-end gap-2">
+                            <Button
+                                variant="secondary"
+                                onClick={() => {
+                                    setShareLink(null);
+                                    setShareOpen(false);
+                                }}
+                            >
+                                Close
+                            </Button>
+                            <Button
+                                disabled={creatingShare}
+                                onClick={() => createShareLink(expiresInHours)}
+                            >
+                                {creatingShare ? "Creating..." : "Generate link"}
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
