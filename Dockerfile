@@ -1,6 +1,5 @@
 FROM node:22-alpine AS base
 
-# Install dependencies only when needed
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
@@ -10,7 +9,7 @@ COPY package.json package-lock.json* ./
 # Copy patch-package assets needed during install
 COPY patches ./patches
 COPY scripts/ensure-swc-helpers-alias.js ./scripts/
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -36,8 +35,9 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    NODE_PATH="/app/.next/standalone/node_modules:/app/node_modules:/ROOT/node_modules"
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -53,9 +53,11 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Ensure pdfkit bundled fonts are available in the standalone output
-RUN mkdir -p /app/.next/standalone/node_modules/pdfkit/js/data
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pdfkit/js/data /app/.next/standalone/node_modules/pdfkit/js/data
+# Ensure pdfkit (including bundled fonts) is available in the standalone output and at the runtime root
+RUN set -eux; \
+    mkdir -p /app/.next/standalone/node_modules/pdfkit /ROOT/node_modules; \
+    cp -r /app/node_modules/pdfkit /app/.next/standalone/node_modules/pdfkit; \
+    cp -r /app/node_modules/pdfkit /ROOT/node_modules/pdfkit
 
 # Copy all node_modules (simpler and more reliable than cherry-picking dependencies)
 # COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
