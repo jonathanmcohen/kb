@@ -13,15 +13,33 @@ type ParsedBlock = {
     children?: ParsedBlock[];
 };
 
+type PdfTextOptions = {
+    width?: number;
+    align?: "left" | "center" | "right" | "justify";
+    lineGap?: number;
+    indent?: number;
+};
+
+type PdfImageOptions = {
+    width?: number;
+    height?: number;
+    align?: "left" | "center" | "right";
+    valign?: "top" | "center" | "bottom";
+    x?: number;
+    y?: number;
+    scale?: number;
+    fit?: [number, number];
+};
+
 type PdfInternal = PDFDocument & {
     y: number;
-    heightOfString: (text: string, options?: any) => number;
+    heightOfString: (text: string, options?: PdfTextOptions) => number;
     save: () => PDFDocument;
     restore: () => PDFDocument;
-    roundedRect: (...args: any[]) => PDFDocument;
-    fillColor: (...args: any[]) => PDFDocument;
-    fill: (...args: any[]) => PDFDocument;
-    image: (src: any, options?: any) => PDFDocument;
+    roundedRect: (x: number, y: number, width: number, height: number, radius?: number) => PdfInternal;
+    fillColor: (color?: string) => PDFDocument;
+    fill: (color?: string) => PDFDocument;
+    image: (src: Buffer | string, options?: PdfImageOptions) => PDFDocument;
 };
 
 function parseBlocks(content: unknown): ParsedBlock[] {
