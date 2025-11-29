@@ -206,7 +206,7 @@ async function renderBlocksToPdf(
                     }) + padding * 2;
 
                     pdf.save();
-                    (pdf as any).roundedRect(blockX, blockY, blockWidth, blockHeight, 4).fill("#f5f5f5");
+                    pdf.roundedRect(blockX, blockY, blockWidth, blockHeight, 4).fill("#f5f5f5");
                     pdf.fillColor("#333");
                     pdf.font("Courier").fontSize(10).text(code, {
                         indent,
