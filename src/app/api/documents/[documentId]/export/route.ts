@@ -13,6 +13,17 @@ type ParsedBlock = {
     children?: ParsedBlock[];
 };
 
+type PdfInternal = PDFDocument & {
+    y: number;
+    heightOfString: (text: string, options?: any) => number;
+    save: () => PDFDocument;
+    restore: () => PDFDocument;
+    roundedRect: (...args: any[]) => PDFDocument;
+    fillColor: (...args: any[]) => PDFDocument;
+    fill: (...args: any[]) => PDFDocument;
+    image: (src: any, options?: any) => PDFDocument;
+};
+
 function parseBlocks(content: unknown): ParsedBlock[] {
     if (!content) return [];
     if (typeof content === "string") {
@@ -130,6 +141,8 @@ async function renderBlocksToPdf(
     cookies: string | null,
     indent = 0
 ) {
+    const pdf = doc as PdfInternal;
+
     for (const block of blocks) {
         const text = blockText(block);
         const children = block.children || [];
@@ -162,12 +175,31 @@ async function renderBlocksToPdf(
                 doc.font("Helvetica-Oblique").fontSize(12).text(text || "", { indent: indent + 12 });
                 break;
             case "codeBlock":
-                doc.font("Courier").fontSize(10).text(text || "", {
-                    indent,
-                    lineGap: 2,
-                });
-                doc.moveDown(0.2);
-                doc.font("Helvetica").fontSize(12);
+                (() => {
+                    const code = text || "";
+                    const padding = 6;
+                    const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right - indent;
+                    const blockX = doc.page.margins.left + indent - padding;
+                    const blockY = pdf.y - padding / 2;
+                    const blockWidth = availableWidth + padding * 2;
+                    const blockHeight = pdf.heightOfString(code, {
+                        width: availableWidth,
+                        align: "left",
+                    }) + padding * 2;
+
+                    pdf.save();
+                    (pdf as any).roundedRect(blockX, blockY, blockWidth, blockHeight, 4).fill("#f5f5f5");
+                    pdf.fillColor("#333");
+                    pdf.font("Courier").fontSize(10).text(code, {
+                        indent,
+                        lineGap: 2,
+                        width: availableWidth,
+                    });
+                    pdf.restore();
+
+                    doc.moveDown(0.4);
+                    pdf.font("Helvetica").fontSize(12).fillColor("#000");
+                })();
                 break;
             case "image": {
                 const props = (block as ParsedBlock & { props?: { url?: string; src?: string } }).props;
@@ -176,9 +208,12 @@ async function renderBlocksToPdf(
                     const buf = await fetchImageBuffer(url, origin, cookies);
                     if (buf) {
                         const placeImage = async (input: Buffer) => {
-                            doc.image(input, {
-                                fit: [doc.page.width - doc.page.margins.left - doc.page.margins.right, 320],
-                                align: "center",
+                            const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right - indent;
+                            const imageX = doc.page.margins.left + indent;
+                            pdf.image(input, {
+                                width: availableWidth,
+                                align: "left",
+                                x: imageX,
                             });
                             doc.moveDown(0.3);
                         };
