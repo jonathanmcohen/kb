@@ -108,6 +108,8 @@ async function fetchImageBuffer(url: string, origin: string, cookies: string | n
                 // Continue trying next target
             }
         }
+
+        return null;
     } catch (err) {
         console.error("Image fetch failed for PDF export", err);
         return null;
