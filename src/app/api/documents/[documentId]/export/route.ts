@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import PDFDocument from "pdfkit";
+import sharp from "sharp";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 type ParsedBlock = {
     type?: string;
@@ -56,6 +58,27 @@ async function fetchImageBuffer(url: string, origin: string, cookies: string | n
         return Buffer.from(arr);
     };
 
+    const buildTargets = (resolved: URL) => {
+        const targets: URL[] = [];
+        const match = resolved.pathname.match(/\.([^.\/?#]+)(?=([?#]|$))/);
+
+        // Prefer the original upload if the stored URL is the compressed .webp variant
+        if (match && match[1].toLowerCase() === "webp") {
+            const basePath = resolved.pathname.replace(/\.webp(?=([?#]|$))/i, "");
+            const originalCandidates = ["jpg", "jpeg", "png", "gif", "webp"];
+            for (const ext of originalCandidates) {
+                const candidate = new URL(resolved.toString());
+                candidate.pathname = `${basePath}_original.${ext}`;
+                candidate.search = ""; // originals are served without query params
+                candidate.hash = "";
+                targets.push(candidate);
+            }
+        }
+
+        targets.push(resolved);
+        return targets;
+    };
+
     try {
         if (url.startsWith("data:")) {
             const [, meta, data] = url.match(/^data:(.+?);base64,(.+)$/) || [];
@@ -64,21 +87,26 @@ async function fetchImageBuffer(url: string, origin: string, cookies: string | n
             }
         }
         const resolved = new URL(url, origin);
-        try {
-            return await tryFetch(resolved);
-        } catch (err) {
-            if (resolved.protocol === "https:" && isTlsPacketLengthError(err)) {
-                const httpUrl = new URL(resolved.toString());
-                httpUrl.protocol = "http:";
-                console.warn("Image fetch TLS issue, retrying over HTTP for PDF export", resolved.toString());
-                try {
-                    return await tryFetch(httpUrl);
-                } catch (retryErr) {
-                    console.error("Image fetch retry failed for PDF export", retryErr);
-                    return null;
+        const targets = buildTargets(resolved);
+
+        for (const target of targets) {
+            try {
+                const buf = await tryFetch(target);
+                if (buf) return buf;
+            } catch (err) {
+                if (target.protocol === "https:" && isTlsPacketLengthError(err)) {
+                    const httpUrl = new URL(target.toString());
+                    httpUrl.protocol = "http:";
+                    console.warn("Image fetch TLS issue, retrying over HTTP for PDF export", target.toString());
+                    try {
+                        const buf = await tryFetch(httpUrl);
+                        if (buf) return buf;
+                    } catch (retryErr) {
+                        console.error("Image fetch retry failed for PDF export", retryErr);
+                    }
                 }
+                // Continue trying next target
             }
-            throw err;
         }
     } catch (err) {
         console.error("Image fetch failed for PDF export", err);
@@ -145,16 +173,30 @@ async function renderBlocksToPdf(
                 if (url) {
                     const buf = await fetchImageBuffer(url, origin, cookies);
                     if (buf) {
-                        try {
-                            doc.image(buf, {
+                        const placeImage = async (input: Buffer) => {
+                            doc.image(input, {
                                 fit: [doc.page.width - doc.page.margins.left - doc.page.margins.right, 320],
                                 align: "center",
                             });
                             doc.moveDown(0.3);
-                        } catch {
-                            doc.font("Helvetica").fontSize(12).text(text || url, options);
+                        };
+
+                        try {
+                            await placeImage(buf);
+                            break;
+                        } catch (err) {
+                            const looksLikeWebp = /\.webp(\?|$)/i.test(url);
+                            if (looksLikeWebp) {
+                                try {
+                                    const pngBuffer = await sharp(buf).png().toBuffer();
+                                    await placeImage(pngBuffer);
+                                    break;
+                                } catch (convErr) {
+                                    console.error("Image conversion failed for PDF export", convErr);
+                                }
+                            }
+                            console.error("Image render failed for PDF export", err);
                         }
-                        break;
                     }
                 }
                 doc.font("Helvetica").fontSize(12).text(text || "", options);
