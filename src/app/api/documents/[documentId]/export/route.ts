@@ -35,6 +35,27 @@ function blockToText(block: ParsedBlock): string {
 }
 
 async function fetchImageBuffer(url: string, origin: string, cookies: string | null): Promise<Buffer | null> {
+    const isTlsPacketLengthError = (err: unknown) => {
+        if (!err || typeof err !== "object") return false;
+        const error = err as { message?: string; code?: string; cause?: unknown };
+        const cause = error.cause as { message?: string; code?: string } | undefined;
+        const messages = [error.message, error.code, cause?.message, cause?.code]
+            .filter((v): v is string => typeof v === "string");
+        return messages.some((msg) =>
+            msg.includes("ERR_SSL_PACKET_LENGTH_TOO_LONG") || msg.includes("packet length too long")
+        );
+    };
+
+    const tryFetch = async (target: URL) => {
+        const res = await fetch(target, {
+            headers: cookies ? { cookie: cookies } : undefined,
+            cache: "no-store",
+        });
+        if (!res.ok) return null;
+        const arr = await res.arrayBuffer();
+        return Buffer.from(arr);
+    };
+
     try {
         if (url.startsWith("data:")) {
             const [, meta, data] = url.match(/^data:(.+?);base64,(.+)$/) || [];
@@ -42,14 +63,23 @@ async function fetchImageBuffer(url: string, origin: string, cookies: string | n
                 return Buffer.from(data, "base64");
             }
         }
-        const resolved = new URL(url, origin).toString();
-        const res = await fetch(resolved, {
-            headers: cookies ? { cookie: cookies } : undefined,
-            cache: "no-store",
-        });
-        if (!res.ok) return null;
-        const arr = await res.arrayBuffer();
-        return Buffer.from(arr);
+        const resolved = new URL(url, origin);
+        try {
+            return await tryFetch(resolved);
+        } catch (err) {
+            if (resolved.protocol === "https:" && isTlsPacketLengthError(err)) {
+                const httpUrl = new URL(resolved.toString());
+                httpUrl.protocol = "http:";
+                console.warn("Image fetch TLS issue, retrying over HTTP for PDF export", resolved.toString());
+                try {
+                    return await tryFetch(httpUrl);
+                } catch (retryErr) {
+                    console.error("Image fetch retry failed for PDF export", retryErr);
+                    return null;
+                }
+            }
+            throw err;
+        }
     } catch (err) {
         console.error("Image fetch failed for PDF export", err);
         return null;
