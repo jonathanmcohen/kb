@@ -34,10 +34,19 @@ function blockToText(block: ParsedBlock): string {
     return [text, childText].filter(Boolean).join("\n");
 }
 
-async function fetchImageBuffer(url: string, origin: string): Promise<Buffer | null> {
+async function fetchImageBuffer(url: string, origin: string, cookies: string | null): Promise<Buffer | null> {
     try {
+        if (url.startsWith("data:")) {
+            const [, meta, data] = url.match(/^data:(.+?);base64,(.+)$/) || [];
+            if (meta && data) {
+                return Buffer.from(data, "base64");
+            }
+        }
         const resolved = url.startsWith("http") ? url : `${origin}${url}`;
-        const res = await fetch(resolved);
+        const res = await fetch(resolved, {
+            headers: cookies ? { cookie: cookies } : undefined,
+            cache: "no-store",
+        });
         if (!res.ok) return null;
         const arr = await res.arrayBuffer();
         return Buffer.from(arr);
@@ -53,7 +62,13 @@ function blockText(block: ParsedBlock): string {
         .trim();
 }
 
-async function renderBlocksToPdf(doc: PDFDocument, blocks: ParsedBlock[], origin: string, indent = 0) {
+async function renderBlocksToPdf(
+    doc: PDFDocument,
+    blocks: ParsedBlock[],
+    origin: string,
+    cookies: string | null,
+    indent = 0
+) {
     for (const block of blocks) {
         const text = blockText(block);
         const children = block.children || [];
@@ -97,7 +112,7 @@ async function renderBlocksToPdf(doc: PDFDocument, blocks: ParsedBlock[], origin
                 const props = (block as ParsedBlock & { props?: { url?: string; src?: string } }).props;
                 const url = props?.url || props?.src;
                 if (url) {
-                    const buf = await fetchImageBuffer(url, origin);
+                    const buf = await fetchImageBuffer(url, origin, cookies);
                     if (buf) {
                         try {
                             doc.image(buf, {
@@ -119,7 +134,7 @@ async function renderBlocksToPdf(doc: PDFDocument, blocks: ParsedBlock[], origin
         }
 
         if (children.length) {
-            await renderBlocksToPdf(doc, children, origin, indent + 12);
+            await renderBlocksToPdf(doc, children, origin, cookies, indent + 12);
         }
 
         if (block.type && block.type.startsWith("heading")) {
@@ -128,7 +143,7 @@ async function renderBlocksToPdf(doc: PDFDocument, blocks: ParsedBlock[], origin
     }
 }
 
-async function createPdf(title: string, blocks: ParsedBlock[], origin: string) {
+async function createPdf(title: string, blocks: ParsedBlock[], origin: string, cookies: string | null) {
     const doc = new PDFDocument({ margin: 50, size: "A4" });
     const chunks: Buffer[] = [];
 
@@ -136,7 +151,7 @@ async function createPdf(title: string, blocks: ParsedBlock[], origin: string) {
 
     doc.font("Helvetica-Bold").fontSize(20).text(title || "Untitled", { underline: true });
     doc.moveDown();
-    await renderBlocksToPdf(doc, blocks, origin);
+    await renderBlocksToPdf(doc, blocks, origin, cookies);
     doc.end();
 
     return new Promise<Buffer>((resolve) => {
@@ -159,6 +174,7 @@ export async function GET(
         const { documentId } = await params;
         const { searchParams } = new URL(req.url);
         const format = searchParams.get("format") || "markdown";
+        const cookies = req.headers.get("cookie");
 
         const document = await prisma.document.findUnique({
             where: { id: documentId },
@@ -173,7 +189,7 @@ export async function GET(
         const markdownBody = blockToText({ content: [{ text: document.title || "" }], children: blocks });
 
         if (format === "pdf") {
-            const pdfBuffer = await createPdf(document.title, blocks, origin);
+            const pdfBuffer = await createPdf(document.title, blocks, origin, cookies);
             const pdfBytes = new Uint8Array(pdfBuffer);
             return new NextResponse(pdfBytes, {
                 headers: {
