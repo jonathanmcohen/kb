@@ -42,7 +42,7 @@ async function fetchImageBuffer(url: string, origin: string, cookies: string | n
                 return Buffer.from(data, "base64");
             }
         }
-        const resolved = url.startsWith("http") ? url : `${origin}${url}`;
+        const resolved = new URL(url, origin).toString();
         const res = await fetch(resolved, {
             headers: cookies ? { cookie: cookies } : undefined,
             cache: "no-store",
@@ -50,7 +50,8 @@ async function fetchImageBuffer(url: string, origin: string, cookies: string | n
         if (!res.ok) return null;
         const arr = await res.arrayBuffer();
         return Buffer.from(arr);
-    } catch {
+    } catch (err) {
+        console.error("Image fetch failed for PDF export", err);
         return null;
     }
 }
