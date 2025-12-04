@@ -57,11 +57,14 @@ function parseBlocks(content: unknown): ParsedBlock[] {
 }
 
 function blockToText(block: ParsedBlock): string {
-    const text = (block.content || [])
-        .map((c) => c.text || "")
+    const content = Array.isArray(block.content) ? block.content : [];
+    const children = Array.isArray(block.children) ? block.children : [];
+
+    const text = content
+        .map((c) => c?.text || "")
         .join(" ")
         .trim();
-    const childText = (block.children || []).map(blockToText).filter(Boolean).join("\n");
+    const childText = children.map(blockToText).filter(Boolean).join("\n");
     return [text, childText].filter(Boolean).join("\n");
 }
 
@@ -146,8 +149,9 @@ async function fetchImageBuffer(url: string, origin: string, cookies: string | n
 }
 
 function blockText(block: ParsedBlock): string {
-    return (block.content || [])
-        .map((c) => c.text || "")
+    const content = Array.isArray(block.content) ? block.content : [];
+    return content
+        .map((c) => c?.text || "")
         .join(" ")
         .trim();
 }
@@ -163,7 +167,7 @@ async function renderBlocksToPdf(
 
     for (const block of blocks) {
         const text = blockText(block);
-        const children = block.children || [];
+        const children = Array.isArray(block.children) ? block.children : [];
         const options = { indent };
 
         switch (block.type) {
