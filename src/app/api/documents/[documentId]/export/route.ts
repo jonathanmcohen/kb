@@ -195,28 +195,29 @@ async function renderBlocksToPdf(
             case "codeBlock":
                 (() => {
                     const code = text || "";
-                    const padding = 6;
+                    const padding = 8;
                     const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right - indent;
-                    const blockX = doc.page.margins.left + indent - padding;
-                    const blockY = pdf.y - padding / 2;
+                    const textX = doc.page.margins.left + indent;
+                    const blockX = textX - padding;
+                    const blockY = pdf.y;
                     const blockWidth = availableWidth + padding * 2;
-                    const blockHeight = pdf.heightOfString(code, {
+                    const textHeight = pdf.heightOfString(code, {
                         width: availableWidth,
                         align: "left",
-                    }) + padding * 2;
+                    });
+                    const blockHeight = textHeight + padding * 2;
 
                     pdf.save();
-                    pdf.roundedRect(blockX, blockY, blockWidth, blockHeight, 4).fill("#f5f5f5");
-                    pdf.fillColor("#333");
-                    pdf.font("Courier").fontSize(10).text(code, {
-                        indent,
+                    pdf.roundedRect(blockX, blockY, blockWidth, blockHeight, 6).fill("#f7f7f8");
+                    pdf.fillColor("#111");
+                    pdf.font("Courier").fontSize(10).text(code, textX, blockY + padding, {
                         lineGap: 2,
                         width: availableWidth,
                     });
                     pdf.restore();
 
-                    doc.moveDown(0.4);
                     pdf.font("Helvetica").fontSize(12).fillColor("#000");
+                    doc.moveDown(0.8);
                 })();
                 break;
             case "image": {
@@ -228,12 +229,36 @@ async function renderBlocksToPdf(
                         const placeImage = async (input: Buffer) => {
                             const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right - indent;
                             const imageX = doc.page.margins.left + indent;
-                            pdf.image(input, {
-                                width: availableWidth,
+                            const maxHeight = doc.page.height * 0.45;
+
+                            const imageOptions: PdfImageOptions = {
                                 align: "left",
                                 x: imageX,
-                            });
-                            doc.moveDown(0.3);
+                                fit: [availableWidth, maxHeight],
+                            };
+
+                            try {
+                                const meta = await sharp(input).metadata();
+                                if (meta.width && meta.height) {
+                                    const aspect = meta.width / meta.height;
+                                    let targetWidth = Math.min(availableWidth, meta.width);
+                                    let targetHeight = targetWidth / aspect;
+
+                                    if (targetHeight > maxHeight) {
+                                        targetHeight = maxHeight;
+                                        targetWidth = targetHeight * aspect;
+                                    }
+
+                                    imageOptions.width = targetWidth;
+                                    imageOptions.height = targetHeight;
+                                    delete imageOptions.fit;
+                                }
+                            } catch {
+                                // metadata lookup failed; fall back to fit sizing
+                            }
+
+                            pdf.image(input, imageX, pdf.y, imageOptions);
+                            doc.moveDown(0.5);
                         };
 
                         try {

@@ -20,6 +20,12 @@ declare module "pdfkit" {
     interface ImageOptions {
         fit?: [number, number];
         align?: "left" | "center" | "right";
+        width?: number;
+        height?: number;
+        x?: number;
+        y?: number;
+        valign?: "top" | "center" | "bottom";
+        scale?: number;
     }
 
     class PDFDocument extends Readable {
@@ -28,7 +34,8 @@ declare module "pdfkit" {
         font(name: string | Buffer, size?: number): this;
         fontSize(size: number): this;
         text(text: string, options?: Record<string, unknown>): this;
-        image(src: Buffer | string, options?: ImageOptions): this;
+        text(text: string, x?: number, y?: number, options?: Record<string, unknown>): this;
+        image(src: Buffer | string, x?: number, y?: number, options?: ImageOptions): this;
         moveDown(lines?: number): this;
         end(): this;
         on(event: "data", listener: (chunk: Buffer) => void): this;
