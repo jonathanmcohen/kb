@@ -118,10 +118,13 @@ async function fetchImageBuffer(url: string, origin: string, cookies: string | n
         const targets: URL[] = [];
         const match = resolved.pathname.match(/\.([^.\/?#]+)(?=([?#]|$))/);
 
-        // Prefer the original upload if the stored URL is the compressed .webp variant
+        // Always try the resolved URL first to avoid noisy errors
+        targets.push(resolved);
+
+        // Best-effort original lookup only if the stored URL is a webp (fallbacks tried after the primary URL)
         if (match && match[1].toLowerCase() === "webp") {
             const basePath = resolved.pathname.replace(/\.webp(?=([?#]|$))/i, "");
-            const originalCandidates = ["jpg", "jpeg", "png", "gif", "webp"];
+            const originalCandidates = ["png", "jpg", "jpeg"];
             for (const ext of originalCandidates) {
                 const candidate = new URL(resolved.toString());
                 candidate.pathname = `${basePath}_original.${ext}`;
@@ -131,7 +134,6 @@ async function fetchImageBuffer(url: string, origin: string, cookies: string | n
             }
         }
 
-        targets.push(resolved);
         return targets;
     };
 
@@ -327,7 +329,7 @@ function ensureSpace(doc: PdfInternal, minHeight: number) {
 
 function renderFooter(doc: PdfInternal, title: string, pageNumber: number) {
     const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const footerY = doc.page.height - doc.page.margins.bottom + 10;
+    const footerY = doc.page.height - doc.page.margins.bottom - 12; // keep inside bottom margin to avoid reflow
     const prevX = doc.x;
     const prevY = doc.y;
 
@@ -335,6 +337,7 @@ function renderFooter(doc: PdfInternal, title: string, pageNumber: number) {
     doc.text(`${title || "Document"} — Page ${pageNumber}`, doc.page.margins.left, footerY, {
         width,
         align: "center",
+        lineBreak: false,
     });
     doc.x = prevX;
     doc.y = prevY;
