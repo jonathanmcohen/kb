@@ -536,7 +536,12 @@ async function renderBlocksToPdf(
 }
 
 async function createPdf(title: string, blocks: ParsedBlock[], origin: string, cookies: string | null) {
-    const doc = new PDFDocument({ margin: 50, size: "A4", bufferPages: true } as any) as PdfInternal;
+    const pdfOptions: { margin?: number; size?: string | [number, number]; bufferPages?: boolean } = {
+        margin: 50,
+        size: "A4",
+        bufferPages: true,
+    };
+    const doc = new PDFDocument(pdfOptions) as PdfInternal;
     const chunks: Buffer[] = [];
 
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
