@@ -222,6 +222,10 @@ function inlineText(fragments: InlineFragment[]): string {
 }
 
 type HeadingRef = { text: string; level: number; pageRef?: unknown };
+function getPageRef(doc: PdfInternal): unknown {
+    const anyDoc = doc as unknown as { page?: { ref?: unknown } };
+    return anyDoc.page?.ref;
+}
 
 function collectHeadings(blocks: ParsedBlock[], acc: HeadingRef[] = []): HeadingRef[] {
     for (const block of blocks) {
@@ -411,17 +415,17 @@ async function renderBlocksToPdf(
             case "heading":
             case "heading1":
                 renderRichText(doc, fragments, { ...options, fontSize: 22 });
-                headingRefs.push({ text, level: 1, pageRef: doc.page?.ref });
+                headingRefs.push({ text, level: 1, pageRef: getPageRef(doc) });
                 doc.moveDown(0.5);
                 break;
             case "heading2":
                 renderRichText(doc, fragments, { ...options, fontSize: 18 });
-                headingRefs.push({ text, level: 2, pageRef: doc.page?.ref });
+                headingRefs.push({ text, level: 2, pageRef: getPageRef(doc) });
                 doc.moveDown(0.4);
                 break;
             case "heading3":
                 renderRichText(doc, fragments, { ...options, fontSize: 16 });
-                headingRefs.push({ text, level: 3, pageRef: doc.page?.ref });
+                headingRefs.push({ text, level: 3, pageRef: getPageRef(doc) });
                 doc.moveDown(0.3);
                 break;
             case "bulletListItem":
