@@ -229,6 +229,28 @@ function getPageRef(doc: PdfInternal): unknown {
     return anyDoc.page?.ref;
 }
 
+type TableRowProp = { cells?: Array<{ content?: unknown }> };
+type TableProps = { rows?: TableRowProp[] };
+
+function normalizeTableRowsFromProps(block: ParsedBlock): ParsedBlock[] {
+    const rows = (block.props as TableProps | undefined)?.rows;
+    if (!Array.isArray(rows)) return [];
+
+    return rows.map((row) => {
+        const cells = Array.isArray(row.cells) ? row.cells : [];
+        return {
+            type: "tableRow",
+            children: cells.map((cell) => ({
+                type: "tableCell",
+                // If the cell content is a list of blocks, keep them as children so blockToText can recurse.
+                children: Array.isArray(cell?.content) ? (cell.content as ParsedBlock[]) : [],
+                // Preserve inline content if provided directly.
+                content: Array.isArray(cell?.content) ? undefined : (cell?.content as ParsedBlock["content"]),
+            })),
+        } as ParsedBlock;
+    });
+}
+
 function collectHeadings(blocks: ParsedBlock[], acc: HeadingRef[] = []): HeadingRef[] {
     for (const block of blocks) {
         const type = block.type || "";
@@ -360,8 +382,11 @@ function renderTable(doc: PdfInternal, rows: ParsedBlock[], indent: number) {
     const tableWidth = marginRight - marginLeft;
     const paddingX = 6;
     const paddingY = 4;
+    const stroke = "#d0d0d0";
+    const textColor = "#f1f1f1";
+    const headerBg = "#1f1f1f";
 
-    for (const row of rows) {
+    rows.forEach((row, rowIdx) => {
         const cells = Array.isArray(row.children) ? row.children : [];
         const colCount = Math.max(cells.length, 1);
         const colWidth = tableWidth / colCount;
@@ -369,7 +394,7 @@ function renderTable(doc: PdfInternal, rows: ParsedBlock[], indent: number) {
         // Measure each cell to allow wrapping and dynamic heights
         const cellHeights: number[] = [];
         for (const cell of cells) {
-            const text = blockText(cell);
+            const text = blockToText(cell);
             const height = doc.heightOfString(text, {
                 width: colWidth - paddingX * 2,
                 align: "left",
@@ -383,8 +408,17 @@ function renderTable(doc: PdfInternal, rows: ParsedBlock[], indent: number) {
         cells.forEach((cell, idx) => {
             const x = marginLeft + idx * colWidth;
             const y = doc.y;
-            doc.rect(x, y, colWidth, rowHeight).stroke("#d0d0d0");
-            doc.font("Helvetica").fontSize(11).text(blockText(cell), x + paddingX, y + paddingY, {
+            const isHeader = rowIdx === 0;
+            if (isHeader) {
+                doc.save();
+                doc.rect(x, y, colWidth, rowHeight);
+                doc.fill(headerBg);
+                doc.stroke(stroke);
+                doc.restore();
+            } else {
+                doc.rect(x, y, colWidth, rowHeight).stroke(stroke);
+            }
+            doc.font("Helvetica").fontSize(11).fillColor(textColor).text(blockToText(cell), x + paddingX, y + paddingY, {
                 width: colWidth - paddingX * 2,
                 height: rowHeight - paddingY * 2,
             });
@@ -392,7 +426,8 @@ function renderTable(doc: PdfInternal, rows: ParsedBlock[], indent: number) {
 
         doc.y += rowHeight;
         doc.moveDown(0.05);
-    }
+    });
+    doc.fillColor("#000");
     doc.moveDown(0.1);
 }
 
@@ -458,8 +493,10 @@ async function renderBlocksToPdf(
             case "checkListItem": {
                 const checked =
                     block.props && typeof block.props.checked === "boolean" ? (block.props.checked as boolean) : false;
-                const checkbox = checked ? "[x]" : "[ ]";
-                renderRichText(doc, [{ text: `${checkbox} ${text}`, styles: new Set() }], { ...options, fontSize: 12 });
+                const checkbox = checked ? "☑" : "☐";
+                const styles = new Set<string>();
+                if (!checked && fragments.length === 0) styles.add("strike");
+                renderRichText(doc, [{ text: `${checkbox} ${text}`, styles }], { ...options, fontSize: 12 });
                 doc.moveDown(0.05);
                 break;
             }
@@ -670,8 +707,9 @@ async function renderBlocksToPdf(
                 break;
             }
             case "table": {
-                if (children.length) {
-                    renderTable(doc, children, indent);
+                const tableRows = children.length ? children : normalizeTableRowsFromProps(block);
+                if (tableRows.length) {
+                    renderTable(doc, tableRows, indent);
                 } else {
                     renderRichText(doc, [{ text: "[Table]", styles: new Set(["italic"]) }], { ...options, fontSize: 12 });
                 }
