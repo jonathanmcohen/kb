@@ -298,7 +298,7 @@ function normalizeTableRowsFromContent(block: ParsedBlock): ParsedBlock[] {
     if ((content.type || "").toLowerCase() !== "tablecontent") return [];
     const rows = Array.isArray(content.rows) ? content.rows : [];
     return rows.map((row) => {
-        const cells = Array.isArray((row as { cells?: unknown[] }).cells) ? (row as { cells?: unknown[] }).cells : [];
+        const cells: unknown[] = Array.isArray((row as { cells?: unknown[] }).cells) ? (row as { cells?: unknown[] }).cells : [];
         return {
             type: "tableRow",
             children: cells.map((cell) => ({
