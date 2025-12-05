@@ -42,6 +42,4 @@ Rules to follow when adding features or substantial refactors.
 - [ ] Lint passes (`npm run lint`)
 - [ ] Migrations + seeds updated (if DB changes)
 - [ ] Docs updated (README or relevant feature docs)
-- [ ] Push to Github with proper commit description
-- Image fetches in PDF export: try the provided URL first; only probe `_original` variants for webp assets and tolerate failures without logging noisy errors.
-- Always commit and push changes once work is complete.
+- [ ] Always commit and push changes once work is complete.
