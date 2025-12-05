@@ -549,7 +549,7 @@ async function createPdf(title: string, blocks: ParsedBlock[], origin: string, c
             });
             doc.moveDown(0.05);
         }
-        pdf.addPage();
+        doc.addPage();
     }
 
     await renderBlocksToPdf(doc, blocks, origin, cookies);
