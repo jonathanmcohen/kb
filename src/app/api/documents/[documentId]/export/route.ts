@@ -231,6 +231,9 @@ function getPageRef(doc: PdfInternal): unknown {
 
 type TableRowProp = { cells?: Array<{ content?: unknown }> };
 type TableProps = { rows?: TableRowProp[] };
+type TableCellProps = { colspan?: number; rowspan?: number };
+type TableCell = { content?: unknown; props?: TableCellProps };
+type TableContent = { type?: string; rows?: Array<{ cells?: TableCell[] }> };
 
 function normalizeTableCellContent(content: unknown): ParsedBlock[] {
     if (Array.isArray(content)) return content as ParsedBlock[];
@@ -238,10 +241,13 @@ function normalizeTableCellContent(content: unknown): ParsedBlock[] {
         return [{ type: "paragraph", content: [{ text: content }] }];
     }
     if (content && typeof content === "object") {
-        // Attempt to coerce { text } shape
         const maybeText = (content as { text?: unknown }).text;
         if (typeof maybeText === "string") {
             return [{ type: "paragraph", content: [{ text: maybeText }] }];
+        }
+        const maybeBlocks = (content as { content?: unknown }).content;
+        if (Array.isArray(maybeBlocks)) {
+            return normalizeTableCellContent(maybeBlocks as unknown);
         }
     }
     return [];
@@ -293,18 +299,19 @@ function normalizeTableRowsFromProps(block: ParsedBlock): ParsedBlock[] {
 }
 
 function normalizeTableRowsFromContent(block: ParsedBlock): ParsedBlock[] {
-    const content = block.content as { type?: string; rows?: unknown[] } | undefined;
+    const content = block.content as TableContent | undefined;
     if (!content || typeof content !== "object") return [];
     if ((content.type || "").toLowerCase() !== "tablecontent") return [];
     const rows = Array.isArray(content.rows) ? content.rows : [];
     return rows.map((row) => {
-        const rawCells = (row as { cells?: unknown[] }).cells;
-        const cells: unknown[] = Array.isArray(rawCells) ? rawCells : [];
+        const rawCells = (row as { cells?: TableCell[] }).cells;
+        const cells: TableCell[] = Array.isArray(rawCells) ? rawCells : [];
         return {
             type: "tableRow",
             children: cells.map((cell) => ({
                 type: "tableCell",
-                children: normalizeTableCellContent((cell as { content?: unknown }).content),
+                props: cell.props,
+                children: normalizeTableCellContent(cell.content),
             })),
         } as ParsedBlock;
     });
