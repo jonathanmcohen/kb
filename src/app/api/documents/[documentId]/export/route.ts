@@ -11,6 +11,7 @@ type ParsedBlock = {
     type?: string;
     content?: Array<{ text?: string }>;
     children?: ParsedBlock[];
+    props?: Record<string, unknown>;
 };
 
 type PdfTextOptions = {
@@ -156,21 +157,31 @@ function blockText(block: ParsedBlock): string {
         .trim();
 }
 
+const INDENT_STEP = 16;
+const numberedListTypes = new Set(["numberedListItem", "numberListItem", "ordered_list"]);
+
 async function renderBlocksToPdf(
     doc: PDFDocument,
     blocks: ParsedBlock[],
     origin: string,
     cookies: string | null,
-    indent = 0
+    indent = 0,
+    listCounters: Map<number, number> = new Map()
 ) {
     const pdf = doc as PdfInternal;
 
     for (const block of blocks) {
+        const type = block.type || "paragraph";
         const text = blockText(block);
         const children = Array.isArray(block.children) ? block.children : [];
         const options = { indent };
+        const isNumberedListItem = numberedListTypes.has(type);
 
-        switch (block.type) {
+        if (!isNumberedListItem) {
+            listCounters.delete(indent);
+        }
+
+        switch (type) {
             case "heading":
             case "heading1":
                 doc.font("Helvetica-Bold").fontSize(22).text(text || "", options);
@@ -188,13 +199,39 @@ async function renderBlocksToPdf(
             case "bullet_list":
             case "listItem":
                 doc.font("Helvetica").fontSize(12).text(`• ${text}`, options);
+                doc.moveDown(0.05);
                 break;
             case "numberListItem":
-            case "ordered_list":
-                doc.font("Helvetica").fontSize(12).text(`1. ${text}`, options);
+            case "numberedListItem":
+            case "ordered_list": {
+                const startProp = block.props?.start;
+                const startIndex = typeof startProp === "number" ? startProp : 1;
+                const currentIndex = listCounters.get(indent) ?? startIndex;
+                doc.font("Helvetica").fontSize(12).text(`${currentIndex}. ${text}`, options);
+                listCounters.set(indent, currentIndex + 1);
+                doc.moveDown(0.05);
                 break;
+            }
+            case "checkListItem": {
+                const checked =
+                    block.props && typeof block.props.checked === "boolean" ? (block.props.checked as boolean) : false;
+                const checkbox = checked ? "[x]" : "[ ]";
+                doc.font("Helvetica").fontSize(12).text(`${checkbox} ${text}`, options);
+                doc.moveDown(0.05);
+                break;
+            }
+            case "toggleListItem": {
+                const label = text || "Toggle";
+                doc.font("Helvetica-Bold").fontSize(12).text(`[>] ${label}`, options);
+                doc.moveDown(0.05);
+                break;
+            }
             case "quote":
-                doc.font("Helvetica-Oblique").fontSize(12).text(text || "", { indent: indent + 12 });
+                pdf.font("Helvetica-Oblique").fontSize(12).fillColor("#555").text(text || "", {
+                    indent: indent + INDENT_STEP * 0.6,
+                });
+                pdf.fillColor("#000");
+                doc.moveDown(0.2);
                 break;
             case "codeBlock":
                 (() => {
@@ -211,6 +248,7 @@ async function renderBlocksToPdf(
                     });
                     const blockHeight = textHeight + padding * 2;
 
+                    doc.moveDown(0.2);
                     pdf.save();
                     pdf.roundedRect(blockX, blockY, blockWidth, blockHeight, 6).fill("#f7f7f8");
                     pdf.fillColor("#111");
@@ -221,7 +259,7 @@ async function renderBlocksToPdf(
                     pdf.restore();
 
                     pdf.font("Helvetica").fontSize(12).fillColor("#000");
-                    doc.moveDown(0.8);
+                    doc.moveDown(0.9);
                 })();
                 break;
             case "image": {
@@ -262,7 +300,7 @@ async function renderBlocksToPdf(
                             }
 
                             pdf.image(input, imageX, pdf.y, imageOptions);
-                            doc.moveDown(0.5);
+                            doc.moveDown(0.7);
                         };
 
                         try {
@@ -284,14 +322,16 @@ async function renderBlocksToPdf(
                     }
                 }
                 doc.font("Helvetica").fontSize(12).text(text || "", options);
+                doc.moveDown(0.2);
                 break;
             }
             default:
                 doc.font("Helvetica").fontSize(12).text(text || "", options);
+                doc.moveDown(0.05);
         }
 
         if (children.length) {
-            await renderBlocksToPdf(doc, children, origin, cookies, indent + 12);
+            await renderBlocksToPdf(doc, children, origin, cookies, indent + INDENT_STEP, new Map());
         }
 
         if (block.type && block.type.startsWith("heading")) {
