@@ -247,6 +247,23 @@ function normalizeTableCellContent(content: unknown): ParsedBlock[] {
     return [];
 }
 
+function collectTableRowsFromChildren(children: ParsedBlock[] | undefined): ParsedBlock[] {
+    if (!Array.isArray(children)) return [];
+    const rows: ParsedBlock[] = [];
+    const stack = [...children];
+    while (stack.length) {
+        const node = stack.shift() as ParsedBlock;
+        const t = node.type || "";
+        if (t === "tableRow") {
+            rows.push(node);
+        } else if (Array.isArray(node.children) && node.children.length) {
+            // Some BlockNote serializations nest rows under an extra wrapper.
+            stack.push(...node.children);
+        }
+    }
+    return rows;
+}
+
 function normalizeTableRowsFromProps(block: ParsedBlock): ParsedBlock[] {
     const rows = (block.props as TableProps | undefined)?.rows;
     if (!Array.isArray(rows)) return [];
@@ -506,12 +523,17 @@ async function renderBlocksToPdf(
                 const checked =
                     block.props && typeof block.props.checked === "boolean" ? (block.props.checked as boolean) : false;
                 const checkbox = checked ? "[x]" : "[ ]";
-                const styles = new Set<string>();
-                if (checked) styles.add("strike");
-                renderRichText(doc, fragments.length ? fragments : [{ text: `${checkbox} ${text}`, styles }], {
-                    ...options,
-                    fontSize: 12,
-                });
+                const baseFragments = fragments.length ? fragments : [{ text, styles: new Set<string>() }];
+                const finalFragments: InlineFragment[] = [{ text: `${checkbox} `, styles: new Set<string>() }, ...baseFragments];
+                renderRichText(
+                    doc,
+                    finalFragments,
+                    {
+                        ...options,
+                        fontSize: 12,
+                        strike: checked,
+                    }
+                );
                 doc.moveDown(0.05);
                 break;
             }
@@ -722,7 +744,10 @@ async function renderBlocksToPdf(
                 break;
             }
             case "table": {
-                const tableRows = children.length ? children : normalizeTableRowsFromProps(block);
+                const tableRowsFromChildren = collectTableRowsFromChildren(children);
+                const tableRows = tableRowsFromChildren.length
+                    ? tableRowsFromChildren
+                    : normalizeTableRowsFromProps(block);
                 if (tableRows.length) {
                     renderTable(doc, tableRows, indent);
                 } else {
