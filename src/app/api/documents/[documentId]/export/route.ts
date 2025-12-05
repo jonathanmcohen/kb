@@ -325,6 +325,32 @@ function ensureSpace(doc: PdfInternal, minHeight: number) {
     }
 }
 
+function renderFooter(doc: PdfInternal, title: string, pageNumber: number) {
+    const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const footerY = doc.page.height - doc.page.margins.bottom + 10;
+    const prevX = doc.x;
+    const prevY = doc.y;
+
+    doc.font("Helvetica").fontSize(9).fillColor("#888");
+    doc.text(`${title || "Document"} — Page ${pageNumber}`, doc.page.margins.left, footerY, {
+        width,
+        align: "center",
+    });
+    doc.x = prevX;
+    doc.y = prevY;
+    doc.fillColor("#000");
+}
+
+function setupPageFooters(doc: PdfInternal, title: string) {
+    let pageNumber = 0;
+    const render = () => {
+        pageNumber += 1;
+        renderFooter(doc, title, pageNumber);
+    };
+    render(); // first page
+    (doc as unknown as { on: (event: string, listener: () => void) => void }).on("pageAdded", render);
+}
+
 function renderTable(doc: PdfInternal, rows: ParsedBlock[], indent: number) {
     const marginLeft = doc.page.margins.left + indent;
     const marginRight = doc.page.width - doc.page.margins.right;
@@ -365,29 +391,6 @@ function renderTable(doc: PdfInternal, rows: ParsedBlock[], indent: number) {
         doc.moveDown(0.05);
     }
     doc.moveDown(0.1);
-}
-
-function addPageFooters(doc: PdfInternal, title: string) {
-    const { start, count } = doc.bufferedPageRange();
-    for (let i = 0; i < count; i++) {
-        const pageIndex = start + i;
-        doc.switchToPage(pageIndex);
-        // Use the loop index for numbering so buffering offsets do not shift visible page numbers.
-        const pageNumber = i + 1;
-        const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-        const footerY = doc.page.height - doc.page.margins.bottom + 10;
-        const prevX = doc.x;
-        const prevY = doc.y;
-
-        doc.font("Helvetica").fontSize(9).fillColor("#888");
-        doc.text(`${title || "Document"} — Page ${pageNumber}`, doc.page.margins.left, footerY, {
-            width,
-            align: "center",
-        });
-        doc.x = prevX;
-        doc.y = prevY;
-        doc.fillColor("#000");
-    }
 }
 
 async function renderBlocksToPdf(
@@ -704,6 +707,7 @@ async function createPdf(title: string, blocks: ParsedBlock[], origin: string, c
     const chunks: Buffer[] = [];
 
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    setupPageFooters(doc, title);
 
     doc.font("Helvetica-Bold").fontSize(20).text(title || "Untitled", { underline: true });
     doc.moveDown();
@@ -731,7 +735,6 @@ async function createPdf(title: string, blocks: ParsedBlock[], origin: string, c
             outlineItem.addItem(`${"  ".repeat(heading.level - 1)}${heading.text}`, dest ? { dest } : undefined);
         }
     }
-    addPageFooters(doc, title);
     doc.end();
 
     return new Promise<Buffer>((resolve) => {
