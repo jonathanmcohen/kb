@@ -221,7 +221,7 @@ function inlineText(fragments: InlineFragment[]): string {
     return fragments.map((f) => f.text).join("");
 }
 
-type HeadingRef = { text: string; level: number };
+type HeadingRef = { text: string; level: number; pageRef?: unknown };
 
 function collectHeadings(blocks: ParsedBlock[], acc: HeadingRef[] = []): HeadingRef[] {
     for (const block of blocks) {
@@ -275,15 +275,17 @@ function renderRichText(
         const fillColor = fragment.textColor || (link ? "#1a0dab" : undefined);
         const backgroundColor = fragment.backgroundColor;
         const strike = options.strike || fragment.styles.has("strike") || fragment.styles.has("strikethrough");
+        const availableWidth =
+            options.width ??
+            doc.page.width - doc.page.margins.left - doc.page.margins.right - (options.indent ?? 0);
 
         // Draw inline background before rendering text (approximate; does not handle wrapping)
         if (backgroundColor) {
-            const width = doc.widthOfString(fragment.text);
-            const height = doc.currentLineHeight();
+            const height = doc.heightOfString(fragment.text, { width: availableWidth });
             const bgX = doc.x;
             const bgY = doc.y;
             doc.save();
-            doc.rect(bgX, bgY, width, height).fill(backgroundColor);
+            doc.rect(bgX, bgY, availableWidth, height).fill(backgroundColor);
             doc.restore();
         }
 
@@ -323,34 +325,50 @@ function renderTable(doc: PdfInternal, rows: ParsedBlock[], indent: number) {
     const marginLeft = doc.page.margins.left + indent;
     const marginRight = doc.page.width - doc.page.margins.right;
     const tableWidth = marginRight - marginLeft;
-    const rowHeight = 18;
+    const paddingX = 6;
+    const paddingY = 4;
 
     for (const row of rows) {
         const cells = Array.isArray(row.children) ? row.children : [];
         const colCount = Math.max(cells.length, 1);
         const colWidth = tableWidth / colCount;
+
+        // Measure each cell to allow wrapping and dynamic heights
+        const cellHeights: number[] = [];
+        for (const cell of cells) {
+            const text = blockText(cell);
+            const height = doc.heightOfString(text, {
+                width: colWidth - paddingX * 2,
+                align: "left",
+            });
+            cellHeights.push(height + paddingY * 2);
+        }
+        const rowHeight = Math.max(...(cellHeights.length ? cellHeights : [doc.currentLineHeight() + paddingY * 2]));
+
         ensureSpace(doc, rowHeight + 6);
 
-        let colIndex = 0;
-        for (const cell of cells) {
-            const x = marginLeft + colIndex * colWidth;
+        cells.forEach((cell, idx) => {
+            const x = marginLeft + idx * colWidth;
             const y = doc.y;
             doc.rect(x, y, colWidth, rowHeight).stroke("#d0d0d0");
-            doc.font("Helvetica").fontSize(11).text(blockText(cell), x + 6, y + 4, {
-                width: colWidth - 12,
-                height: rowHeight - 8,
+            doc.font("Helvetica").fontSize(11).text(blockText(cell), x + paddingX, y + paddingY, {
+                width: colWidth - paddingX * 2,
+                height: rowHeight - paddingY * 2,
             });
-            colIndex += 1;
-        }
-        doc.moveDown(rowHeight / doc.currentLineHeight());
+        });
+
+        doc.y += rowHeight;
+        doc.moveDown(0.05);
     }
     doc.moveDown(0.1);
 }
 
 function addPageFooters(doc: PdfInternal, title: string) {
-    const range = doc.bufferedPageRange();
-    for (let i = 0; i < range.count; i++) {
-        doc.switchToPage(range.start + i);
+    const { start, count } = doc.bufferedPageRange();
+    for (let i = 0; i < count; i++) {
+        const pageIndex = start + i;
+        doc.switchToPage(pageIndex);
+        // Use the loop index for numbering so buffering offsets do not shift visible page numbers.
         const pageNumber = i + 1;
         const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
         const footerY = doc.page.height - doc.page.margins.bottom + 10;
@@ -374,7 +392,8 @@ async function renderBlocksToPdf(
     origin: string,
     cookies: string | null,
     indent = 0,
-    listCounters: Map<number, number> = new Map()
+    listCounters: Map<number, number> = new Map(),
+    headingRefs: HeadingRef[] = []
 ) {
     for (const block of blocks) {
         const type = block.type || "paragraph";
@@ -392,14 +411,17 @@ async function renderBlocksToPdf(
             case "heading":
             case "heading1":
                 renderRichText(doc, fragments, { ...options, fontSize: 22 });
+                headingRefs.push({ text, level: 1, pageRef: doc.page?.ref });
                 doc.moveDown(0.5);
                 break;
             case "heading2":
                 renderRichText(doc, fragments, { ...options, fontSize: 18 });
+                headingRefs.push({ text, level: 2, pageRef: doc.page?.ref });
                 doc.moveDown(0.4);
                 break;
             case "heading3":
                 renderRichText(doc, fragments, { ...options, fontSize: 16 });
+                headingRefs.push({ text, level: 3, pageRef: doc.page?.ref });
                 doc.moveDown(0.3);
                 break;
             case "bulletListItem":
@@ -460,12 +482,11 @@ async function renderBlocksToPdf(
                 const boxPadding = 8;
                 const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right - indent;
                 const textX = doc.page.margins.left + indent + boxPadding;
-                const blockX = textX - boxPadding;
-                const blockY = doc.y;
-
                 const textHeight = doc.heightOfString(text || "", { width: availableWidth - boxPadding * 2 });
                 const blockHeight = textHeight + boxPadding * 2;
                 ensureSpace(doc, blockHeight + 6);
+                const blockX = textX - boxPadding;
+                const blockY = doc.y;
 
                 doc.save();
                 doc.rect(blockX, blockY, availableWidth, blockHeight).fill(bg);
@@ -499,9 +520,6 @@ async function renderBlocksToPdf(
                     const padding = 8;
                     const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right - indent;
                     const textX = doc.page.margins.left + indent;
-                    const blockX = textX - padding;
-                    const blockY = doc.y;
-                    const blockWidth = availableWidth + padding * 2;
                     const textHeight = doc.heightOfString(code, {
                         width: availableWidth,
                         align: "left",
@@ -509,7 +527,9 @@ async function renderBlocksToPdf(
                     const blockHeight = textHeight + padding * 2;
 
                     ensureSpace(doc, blockHeight + 10);
-                    doc.moveDown(0.2);
+                    const blockX = textX - padding;
+                    const blockY = doc.y;
+                    const blockWidth = availableWidth + padding * 2;
                     doc.save();
                     doc.roundedRect(blockX, blockY, blockWidth, blockHeight, 6).fill("#f7f7f8");
                     doc.fillColor("#111");
@@ -520,6 +540,7 @@ async function renderBlocksToPdf(
                     doc.restore();
 
                     doc.font("Helvetica").fontSize(12).fillColor("#000");
+                    doc.y = blockY + blockHeight;
                     doc.moveDown(0.9);
                 })();
                 break;
@@ -536,12 +557,16 @@ async function renderBlocksToPdf(
                             const maxHeight = doc.page.height * 0.45;
 
                             const imageOptions: PdfImageOptions = { fit: [availableWidth, maxHeight] };
+                            let metaWidth: number | undefined;
+                            let metaHeight: number | undefined;
 
                             try {
                                 const meta = await sharp(input).metadata();
                                 if (meta.width && meta.height) {
-                                    const aspect = meta.width / meta.height;
-                                    let targetWidth = Math.min(availableWidth, meta.width);
+                                    metaWidth = meta.width;
+                                    metaHeight = meta.height;
+                                    const aspect = metaWidth / metaHeight;
+                                    let targetWidth = Math.min(availableWidth, metaWidth);
                                     let targetHeight = targetWidth / aspect;
 
                                     if (targetHeight > maxHeight) {
@@ -565,15 +590,33 @@ async function renderBlocksToPdf(
                                       ? doc.page.width - doc.page.margins.right - imgWidth
                                       : doc.page.margins.left + indent;
 
-                            ensureSpace(doc, (imageOptions.height || maxHeight) + 12);
-                            doc.image(input, imageX, doc.y, imageOptions);
-                            doc.moveDown(0.7);
+                            const estimatedHeight = (() => {
+                                if (imageOptions.height) return imageOptions.height;
+                                if (imageOptions.fit) {
+                                    const [fitW, fitH] = imageOptions.fit;
+                                    if (metaWidth && metaHeight) {
+                                        const aspect = metaWidth / metaHeight;
+                                        return Math.min(fitH, fitW / aspect);
+                                    }
+                                    return fitH;
+                                }
+                                return maxHeight;
+                            })();
+
+                            const captionHeight = caption ? doc.currentLineHeight() + 6 : 0;
+                            ensureSpace(doc, estimatedHeight + captionHeight + 12);
+
+                            const startY = doc.y;
+                            doc.image(input, imageX, startY, imageOptions);
+                            doc.y = startY + estimatedHeight;
+                            doc.moveDown(0.3);
                             if (caption) {
                                 doc.font("Helvetica-Oblique").fontSize(10).fillColor("#555").text(caption, {
                                     align: "center",
                                 });
                                 doc.fillColor("#000");
                             }
+                            doc.moveDown(0.4);
                         };
 
                         try {
@@ -636,7 +679,7 @@ async function renderBlocksToPdf(
         const shouldRenderChildren = type !== "toggleListItem" || (block.props && (block.props.open || block.props.expanded));
 
         if (shouldRenderChildren && children.length) {
-            await renderBlocksToPdf(doc, children, origin, cookies, indent + INDENT_STEP, new Map());
+            await renderBlocksToPdf(doc, children, origin, cookies, indent + INDENT_STEP, new Map(), headingRefs);
         }
 
         if (block.type && block.type.startsWith("heading")) {
@@ -674,14 +717,14 @@ async function createPdf(title: string, blocks: ParsedBlock[], origin: string, c
         doc.addPage();
     }
 
-    await renderBlocksToPdf(doc, blocks, origin, cookies);
-    // Best-effort outline bookmarks for headings (all to first page when buffered)
+    const headingRefs: HeadingRef[] = [];
+    await renderBlocksToPdf(doc, blocks, origin, cookies, 0, new Map(), headingRefs);
+    // Outline bookmarks for headings using recorded page references
     const outlineItem = outlineRoot as { addItem?: (t: string, opts?: Record<string, unknown>) => unknown } | null;
     if (outlineItem?.addItem) {
-        const range = doc.bufferedPageRange();
-        const startPage = range.start;
-        for (const heading of headings) {
-            outlineItem.addItem(`${"  ".repeat(heading.level - 1)}${heading.text}`, { dest: startPage });
+        for (const heading of headingRefs) {
+            const dest = heading.pageRef ? [heading.pageRef, "Fit"] : undefined;
+            outlineItem.addItem(`${"  ".repeat(heading.level - 1)}${heading.text}`, dest ? { dest } : undefined);
         }
     }
     addPageFooters(doc, title);
