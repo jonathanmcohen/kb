@@ -42,3 +42,4 @@ Rules to follow when adding features or substantial refactors.
 - [ ] Lint passes (`npm run lint`)
 - [ ] Migrations + seeds updated (if DB changes)
 - [ ] Docs updated (README or relevant feature docs)
+- [ ] Push to Github with proper commit description
