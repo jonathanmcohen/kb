@@ -232,6 +232,21 @@ function getPageRef(doc: PdfInternal): unknown {
 type TableRowProp = { cells?: Array<{ content?: unknown }> };
 type TableProps = { rows?: TableRowProp[] };
 
+function normalizeTableCellContent(content: unknown): ParsedBlock[] {
+    if (Array.isArray(content)) return content as ParsedBlock[];
+    if (typeof content === "string") {
+        return [{ type: "paragraph", content: [{ text: content }] }];
+    }
+    if (content && typeof content === "object") {
+        // Attempt to coerce { text } shape
+        const maybeText = (content as { text?: unknown }).text;
+        if (typeof maybeText === "string") {
+            return [{ type: "paragraph", content: [{ text: maybeText }] }];
+        }
+    }
+    return [];
+}
+
 function normalizeTableRowsFromProps(block: ParsedBlock): ParsedBlock[] {
     const rows = (block.props as TableProps | undefined)?.rows;
     if (!Array.isArray(rows)) return [];
@@ -242,10 +257,7 @@ function normalizeTableRowsFromProps(block: ParsedBlock): ParsedBlock[] {
             type: "tableRow",
             children: cells.map((cell) => ({
                 type: "tableCell",
-                // If the cell content is a list of blocks, keep them as children so blockToText can recurse.
-                children: Array.isArray(cell?.content) ? (cell.content as ParsedBlock[]) : [],
-                // Preserve inline content if provided directly.
-                content: Array.isArray(cell?.content) ? undefined : (cell?.content as ParsedBlock["content"]),
+                children: normalizeTableCellContent(cell?.content),
             })),
         } as ParsedBlock;
     });
@@ -493,10 +505,13 @@ async function renderBlocksToPdf(
             case "checkListItem": {
                 const checked =
                     block.props && typeof block.props.checked === "boolean" ? (block.props.checked as boolean) : false;
-                const checkbox = checked ? "☑" : "☐";
+                const checkbox = checked ? "[x]" : "[ ]";
                 const styles = new Set<string>();
-                if (!checked && fragments.length === 0) styles.add("strike");
-                renderRichText(doc, [{ text: `${checkbox} ${text}`, styles }], { ...options, fontSize: 12 });
+                if (checked) styles.add("strike");
+                renderRichText(doc, fragments.length ? fragments : [{ text: `${checkbox} ${text}`, styles }], {
+                    ...options,
+                    fontSize: 12,
+                });
                 doc.moveDown(0.05);
                 break;
             }
