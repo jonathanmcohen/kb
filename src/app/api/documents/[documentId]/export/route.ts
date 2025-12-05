@@ -292,6 +292,23 @@ function normalizeTableRowsFromProps(block: ParsedBlock): ParsedBlock[] {
     });
 }
 
+function normalizeTableRowsFromContent(block: ParsedBlock): ParsedBlock[] {
+    const content = block.content as { type?: string; rows?: unknown[] } | undefined;
+    if (!content || typeof content !== "object") return [];
+    if ((content.type || "").toLowerCase() !== "tablecontent") return [];
+    const rows = Array.isArray(content.rows) ? content.rows : [];
+    return rows.map((row) => {
+        const cells = Array.isArray((row as { cells?: unknown[] }).cells) ? (row as { cells?: unknown[] }).cells : [];
+        return {
+            type: "tableRow",
+            children: cells.map((cell) => ({
+                type: "tableCell",
+                children: normalizeTableCellContent((cell as { content?: unknown }).content),
+            })),
+        } as ParsedBlock;
+    });
+}
+
 function collectHeadings(blocks: ParsedBlock[], acc: HeadingRef[] = []): HeadingRef[] {
     for (const block of blocks) {
         const type = block.type || "";
@@ -536,17 +553,15 @@ async function renderBlocksToPdf(
                 const checked =
                     block.props && typeof block.props.checked === "boolean" ? (block.props.checked as boolean) : false;
                 const checkbox = checked ? "[x]" : "[ ]";
-                const baseFragments = fragments.length ? fragments : [{ text, styles: new Set<string>() }];
-                const finalFragments: InlineFragment[] = [{ text: `${checkbox} `, styles: new Set<string>() }, ...baseFragments];
-                renderRichText(
-                    doc,
-                    finalFragments,
-                    {
-                        ...options,
-                        fontSize: 12,
-                        strike: checked,
-                    }
+                const baseFragments = fragments.length ? fragments : [{ text: text || "", styles: new Set<string>() }];
+                const merged: InlineFragment[] = baseFragments.map((frag, idx) =>
+                    idx === 0 ? { ...frag, text: `${checkbox} ${frag.text}` } : frag
                 );
+                renderRichText(doc, merged, {
+                    ...options,
+                    fontSize: 12,
+                    strike: checked,
+                });
                 doc.moveDown(0.05);
                 break;
             }
@@ -758,9 +773,12 @@ async function renderBlocksToPdf(
             }
             case "table": {
                 const tableRowsFromChildren = collectTableRowsFromChildren(children);
+                const tableRowsFromContent = normalizeTableRowsFromContent(block);
                 const tableRows = tableRowsFromChildren.length
                     ? tableRowsFromChildren
-                    : normalizeTableRowsFromProps(block);
+                    : tableRowsFromContent.length
+                      ? tableRowsFromContent
+                      : normalizeTableRowsFromProps(block);
                 if (tableRows.length) {
                     renderTable(doc, tableRows, indent);
                 } else {
