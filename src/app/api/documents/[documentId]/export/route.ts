@@ -253,9 +253,17 @@ function collectTableRowsFromChildren(children: ParsedBlock[] | undefined): Pars
     const stack = [...children];
     while (stack.length) {
         const node = stack.shift() as ParsedBlock;
-        const t = node.type || "";
-        if (t === "tableRow") {
+        const t = (node.type || "").toLowerCase();
+        if (t === "tablerow" || t === "table_row" || t === "row") {
             rows.push(node);
+        } else if (Array.isArray((node.props as TableRowProp | undefined)?.cells)) {
+            rows.push({
+                type: "tableRow",
+                children: (node.props as TableRowProp).cells?.map((cell) => ({
+                    type: "tableCell",
+                    children: normalizeTableCellContent(cell?.content),
+                })),
+            });
         } else if (Array.isArray(node.children) && node.children.length) {
             // Some BlockNote serializations nest rows under an extra wrapper.
             stack.push(...node.children);
@@ -269,7 +277,11 @@ function normalizeTableRowsFromProps(block: ParsedBlock): ParsedBlock[] {
     if (!Array.isArray(rows)) return [];
 
     return rows.map((row) => {
-        const cells = Array.isArray(row.cells) ? row.cells : [];
+        const cells = Array.isArray((row as unknown[])[0])
+            ? ((row as unknown[]).map((c) => ({ content: c })) as Array<{ content?: unknown }>)
+            : Array.isArray((row as TableRowProp).cells)
+              ? ((row as TableRowProp).cells as Array<{ content?: unknown }>)
+              : [];
         return {
             type: "tableRow",
             children: cells.map((cell) => ({
@@ -450,6 +462,7 @@ function renderTable(doc: PdfInternal, rows: ParsedBlock[], indent: number) {
             doc.font("Helvetica").fontSize(11).fillColor(textColor).text(blockToText(cell), x + paddingX, y + paddingY, {
                 width: colWidth - paddingX * 2,
                 height: rowHeight - paddingY * 2,
+                align: "left",
             });
         });
 
