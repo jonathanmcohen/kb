@@ -36,6 +36,7 @@ type PdfImageOptions = {
 
 type PdfInternal = PDFDocument & {
     y: number;
+    x: number;
     heightOfString: (text: string, options?: PdfTextOptions) => number;
     save: () => PDFDocument;
     restore: () => PDFDocument;
@@ -43,6 +44,12 @@ type PdfInternal = PDFDocument & {
     fillColor: (color?: string) => PDFDocument;
     fill: (color?: string) => PDFDocument;
     image: (src: Buffer | string, options?: PdfImageOptions) => PDFDocument;
+    moveTo: (x: number, y: number) => PdfInternal;
+    lineTo: (x: number, y: number) => PdfInternal;
+    stroke: (color?: string) => PdfInternal;
+    addPage: (options?: unknown) => PdfInternal;
+    switchToPage: (page: number) => void;
+    bufferedPageRange: () => { start: number; count: number };
 };
 
 function parseBlocks(content: unknown): ParsedBlock[] {
@@ -290,15 +297,13 @@ function addPageFooters(doc: PdfInternal, title: string) {
 }
 
 async function renderBlocksToPdf(
-    doc: PDFDocument,
+    doc: PdfInternal,
     blocks: ParsedBlock[],
     origin: string,
     cookies: string | null,
     indent = 0,
     listCounters: Map<number, number> = new Map()
 ) {
-    const pdf = doc as PdfInternal;
-
     for (const block of blocks) {
         const type = block.type || "paragraph";
         const fragments = normalizeInline(block.content);
@@ -314,21 +319,21 @@ async function renderBlocksToPdf(
         switch (type) {
             case "heading":
             case "heading1":
-                renderRichText(pdf, fragments, { ...options, fontSize: 22 });
+                renderRichText(doc, fragments, { ...options, fontSize: 22 });
                 doc.moveDown(0.5);
                 break;
             case "heading2":
-                renderRichText(pdf, fragments, { ...options, fontSize: 18 });
+                renderRichText(doc, fragments, { ...options, fontSize: 18 });
                 doc.moveDown(0.4);
                 break;
             case "heading3":
-                renderRichText(pdf, fragments, { ...options, fontSize: 16 });
+                renderRichText(doc, fragments, { ...options, fontSize: 16 });
                 doc.moveDown(0.3);
                 break;
             case "bulletListItem":
             case "bullet_list":
             case "listItem":
-                renderRichText(pdf, [{ text: `• ${text}`, styles: new Set() }], { ...options, fontSize: 12 });
+                renderRichText(doc, [{ text: `• ${text}`, styles: new Set() }], { ...options, fontSize: 12 });
                 doc.moveDown(0.05);
                 break;
             case "numberListItem":
@@ -338,7 +343,7 @@ async function renderBlocksToPdf(
                 const startIndex = typeof startProp === "number" ? startProp : 1;
                 const currentIndex = listCounters.get(indent) ?? startIndex;
                 renderRichText(
-                    pdf,
+                    doc,
                     [{ text: `${currentIndex}. ${text}`, styles: new Set() }],
                     { ...options, fontSize: 12 }
                 );
@@ -350,7 +355,7 @@ async function renderBlocksToPdf(
                 const checked =
                     block.props && typeof block.props.checked === "boolean" ? (block.props.checked as boolean) : false;
                 const checkbox = checked ? "[x]" : "[ ]";
-                renderRichText(pdf, [{ text: `${checkbox} ${text}`, styles: new Set() }], { ...options, fontSize: 12 });
+                renderRichText(doc, [{ text: `${checkbox} ${text}`, styles: new Set() }], { ...options, fontSize: 12 });
                 doc.moveDown(0.05);
                 break;
             }
@@ -363,31 +368,31 @@ async function renderBlocksToPdf(
                           : false;
                 const glyph = isOpen ? "[v]" : "[>]";
                 const label = text || "Toggle";
-                renderRichText(pdf, [{ text: `${glyph} ${label}`, styles: new Set(["bold"]) }], { ...options, fontSize: 12 });
+                renderRichText(doc, [{ text: `${glyph} ${label}`, styles: new Set(["bold"]) }], { ...options, fontSize: 12 });
                 doc.moveDown(0.05);
                 break;
             }
             case "quote":
-                pdf.fillColor("#555");
+                doc.fillColor("#555");
                 renderRichText(
-                    pdf,
+                    doc,
                     fragments.length ? fragments : [{ text, styles: new Set(["italic"]) }],
                     { ...options, fontSize: 12, indent: indent + INDENT_STEP * 0.6 }
                 );
-                pdf.fillColor("#000");
+                doc.fillColor("#000");
                 doc.moveDown(0.2);
                 break;
             case "divider":
-                pdf.moveDown(0.15);
+                doc.moveDown(0.15);
                 (() => {
-                    const startX = pdf.page.margins.left + indent;
-                    const endX = pdf.page.width - pdf.page.margins.right;
-                    pdf.moveTo(startX, pdf.y).lineTo(endX, pdf.y).stroke("#e0e0e0");
+                    const startX = doc.page.margins.left + indent;
+                    const endX = doc.page.width - doc.page.margins.right;
+                    doc.moveTo(startX, doc.y).lineTo(endX, doc.y).stroke("#e0e0e0");
                 })();
-                pdf.moveDown(0.3);
+                doc.moveDown(0.3);
                 break;
             case "pageBreak":
-                pdf.addPage();
+                doc.addPage();
                 continue;
             case "codeBlock":
                 (() => {
@@ -396,25 +401,25 @@ async function renderBlocksToPdf(
                     const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right - indent;
                     const textX = doc.page.margins.left + indent;
                     const blockX = textX - padding;
-                    const blockY = pdf.y;
+                    const blockY = doc.y;
                     const blockWidth = availableWidth + padding * 2;
-                    const textHeight = pdf.heightOfString(code, {
+                    const textHeight = doc.heightOfString(code, {
                         width: availableWidth,
                         align: "left",
                     });
                     const blockHeight = textHeight + padding * 2;
 
                     doc.moveDown(0.2);
-                    pdf.save();
-                    pdf.roundedRect(blockX, blockY, blockWidth, blockHeight, 6).fill("#f7f7f8");
-                    pdf.fillColor("#111");
-                    pdf.font("Courier").fontSize(10).text(code, textX, blockY + padding, {
+                    doc.save();
+                    doc.roundedRect(blockX, blockY, blockWidth, blockHeight, 6).fill("#f7f7f8");
+                    doc.fillColor("#111");
+                    doc.font("Courier").fontSize(10).text(code, textX, blockY + padding, {
                         lineGap: 2,
                         width: availableWidth,
                     });
-                    pdf.restore();
+                    doc.restore();
 
-                    pdf.font("Helvetica").fontSize(12).fillColor("#000");
+                    doc.font("Helvetica").fontSize(12).fillColor("#000");
                     doc.moveDown(0.9);
                 })();
                 break;
@@ -455,7 +460,7 @@ async function renderBlocksToPdf(
                                 // metadata lookup failed; fall back to fit sizing
                             }
 
-                            pdf.image(input, imageX, pdf.y, imageOptions);
+                            doc.image(input, imageX, doc.y, imageOptions);
                             doc.moveDown(0.7);
                         };
 
@@ -487,13 +492,13 @@ async function renderBlocksToPdf(
                 const props = (block as ParsedBlock & { props?: { url?: string; src?: string; name?: string } }).props;
                 const url = props?.url || props?.src;
                 const label = props?.name || text || type.toUpperCase();
-                renderRichText(pdf, [{ text: `[${type.toUpperCase()}] ${label}`, styles: new Set() }], {
+                renderRichText(doc, [{ text: `[${type.toUpperCase()}] ${label}`, styles: new Set() }], {
                     ...options,
                     fontSize: 12,
                 });
                 if (url) {
-                    pdf.font("Helvetica").fontSize(10).fillColor("#1a0dab").text(url, { ...options, underline: true, link: url });
-                    pdf.fillColor("#000").fontSize(12);
+                    doc.font("Helvetica").fontSize(10).fillColor("#1a0dab").text(url, { ...options, underline: true, link: url });
+                    doc.fillColor("#000").fontSize(12);
                 }
                 doc.moveDown(0.2);
                 break;
@@ -503,17 +508,17 @@ async function renderBlocksToPdf(
                     for (const row of children) {
                         const cells = Array.isArray(row.children) ? row.children : [];
                         const cellText = cells.map((cell) => blockText(cell)).filter(Boolean).join(" | ");
-                        renderRichText(pdf, [{ text: cellText || " ", styles: new Set() }], { ...options, fontSize: 12 });
+                        renderRichText(doc, [{ text: cellText || " ", styles: new Set() }], { ...options, fontSize: 12 });
                         doc.moveDown(0.05);
                     }
                 } else {
-                    renderRichText(pdf, [{ text: "[Table]", styles: new Set(["italic"]) }], { ...options, fontSize: 12 });
+                    renderRichText(doc, [{ text: "[Table]", styles: new Set(["italic"]) }], { ...options, fontSize: 12 });
                 }
                 doc.moveDown(0.15);
                 continue;
             }
             default:
-                renderRichText(pdf, fragments.length ? fragments : [{ text, styles: new Set() }], {
+                renderRichText(doc, fragments.length ? fragments : [{ text, styles: new Set() }], {
                     ...options,
                     fontSize: 12,
                 });
@@ -531,7 +536,7 @@ async function renderBlocksToPdf(
 }
 
 async function createPdf(title: string, blocks: ParsedBlock[], origin: string, cookies: string | null) {
-    const doc = new PDFDocument({ margin: 50, size: "A4", bufferPages: true });
+    const doc = new PDFDocument({ margin: 50, size: "A4", bufferPages: true } as any) as PdfInternal;
     const chunks: Buffer[] = [];
 
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -553,7 +558,7 @@ async function createPdf(title: string, blocks: ParsedBlock[], origin: string, c
     }
 
     await renderBlocksToPdf(doc, blocks, origin, cookies);
-    addPageFooters(doc as PdfInternal, title);
+    addPageFooters(doc, title);
     doc.end();
 
     return new Promise<Buffer>((resolve) => {
