@@ -63,7 +63,7 @@ RUN set -eux; \
 RUN apk add --no-cache openssl
 
 # Install prisma CLI for migrations (it's a dev dependency so not in standalone)
-RUN npm install -g prisma@6.0.0
+RUN npm install -g prisma@7.1.0
 
 # Allow nextjs user to write to prisma cache/engines
 RUN chown -R nextjs:nodejs /usr/local/lib/node_modules/prisma
