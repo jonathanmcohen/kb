@@ -1,4 +1,6 @@
 FROM node:22-alpine AS base
+# Keep npm up to date for build/run tooling
+RUN npm install -g npm@11.6.4 && npm cache clean --force
 
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
