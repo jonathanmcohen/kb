@@ -70,6 +70,7 @@ RUN chown -R nextjs:nodejs /usr/local/lib/node_modules/prisma
 
 # Copy Prisma schema and migrations for runtime
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 
 # Copy entrypoint script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
