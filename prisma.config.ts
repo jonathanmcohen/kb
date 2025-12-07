@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
 // CI builds may not provide DATABASE_URL; fall back to a local default there so
