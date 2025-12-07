@@ -38,7 +38,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    NODE_PATH="/app/.next/standalone/node_modules:/app/node_modules:/ROOT/node_modules"
+    NODE_PATH="/app/.next/standalone/node_modules:/app/node_modules"
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -56,12 +56,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy pruned node_modules (runtime + Prisma deps only)
 COPY --from=pruned-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
-
-# Ensure pdfkit (including bundled fonts) is available in the standalone output and at the runtime root
-RUN set -eux; \
-    mkdir -p /app/.next/standalone/node_modules/pdfkit /ROOT/node_modules; \
-    cp -r /app/node_modules/pdfkit /app/.next/standalone/node_modules/pdfkit; \
-    cp -r /app/node_modules/pdfkit /ROOT/node_modules/pdfkit
 
 # Install dependencies for Prisma
 RUN apk add --no-cache openssl
