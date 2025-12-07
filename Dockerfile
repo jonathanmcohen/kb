@@ -50,14 +50,14 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy node_modules so Prisma config and CLI dependencies (e.g., dotenv) resolve at runtime
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
 # Ensure pdfkit (including bundled fonts) is available in the standalone output and at the runtime root
 RUN set -eux; \
     mkdir -p /app/.next/standalone/node_modules/pdfkit /ROOT/node_modules; \
     cp -r /app/node_modules/pdfkit /app/.next/standalone/node_modules/pdfkit; \
     cp -r /app/node_modules/pdfkit /ROOT/node_modules/pdfkit
-
-# Copy all node_modules (simpler and more reliable than cherry-picking dependencies)
-# COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Install dependencies for Prisma
 RUN apk add --no-cache openssl
