@@ -1,8 +1,7 @@
 import 'dotenv/config';
+import { resolveDatabaseUrl } from "./lib/database-url";
 
-if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL environment variable is not set.");
-}
+const DATABASE_URL = resolveDatabaseUrl();
 
 const config = {
     schema: "prisma/schema.prisma",
@@ -10,7 +9,7 @@ const config = {
         path: "prisma/migrations",
     },
     datasource: {
-        url: process.env.DATABASE_URL,
+        url: DATABASE_URL,
     },
 };
 
