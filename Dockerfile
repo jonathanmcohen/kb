@@ -57,6 +57,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy pruned node_modules (runtime + Prisma deps only)
 COPY --from=pruned-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
+# Provide pdfkit at the path the traced server expects
+RUN mkdir -p /ROOT/node_modules && ln -s /app/node_modules/pdfkit /ROOT/node_modules/pdfkit
+
 # Install dependencies for Prisma
 RUN apk add --no-cache openssl
 
