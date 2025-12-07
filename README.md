@@ -47,7 +47,16 @@ npm install
 The `.env` file has been created with default values. Update the following for production:
 
 ```env
+# Use a full URL, or set DB_* parts instead
 DATABASE_URL="postgresql://postgres:password@localhost:5432/kb?schema=public"
+# DB_TYPE=postgresql
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_USER=postgres
+# DB_PASS=password
+# DB_NAME=kb
+# DB_SCHEMA=public
+
 NEXTAUTH_SECRET="<generate-a-secure-random-string>"
 NEXTAUTH_URL="http://localhost:3000"
 
@@ -69,6 +78,14 @@ docker compose up -d
 Ensure PostgreSQL is running and create a database named `kb`.
 
 ### 4. Run Migrations
+
+For a fresh install or production-like environment, apply committed migrations:
+
+```bash
+npx prisma migrate deploy
+```
+
+During local development (when you’re evolving the schema), use:
 
 ```bash
 npx prisma migrate dev
