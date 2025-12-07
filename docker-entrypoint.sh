@@ -2,10 +2,10 @@
 set -e
 
 echo "Checking Prisma version..."
-prisma --version
+npx prisma --version
 
 echo "Running database migrations..."
-prisma migrate deploy
+npx prisma migrate deploy
 
 echo "Starting application..."
 exec node server.js

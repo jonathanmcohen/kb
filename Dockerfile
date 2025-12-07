@@ -27,6 +27,10 @@ RUN npx prisma generate
 
 RUN npm run build
 
+FROM builder AS pruned-deps
+WORKDIR /app
+# Remove dev dependencies for a lean runtime node_modules
+RUN npm prune --omit=dev && npm cache clean --force
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -50,8 +54,8 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy node_modules so Prisma config and CLI dependencies (e.g., dotenv) resolve at runtime
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+# Copy pruned node_modules (runtime + Prisma deps only)
+COPY --from=pruned-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Ensure pdfkit (including bundled fonts) is available in the standalone output and at the runtime root
 RUN set -eux; \
@@ -61,12 +65,6 @@ RUN set -eux; \
 
 # Install dependencies for Prisma
 RUN apk add --no-cache openssl
-
-# Install prisma CLI for migrations (it's a dev dependency so not in standalone)
-RUN npm install -g prisma@7.1.0
-
-# Allow nextjs user to write to prisma cache/engines
-RUN chown -R nextjs:nodejs /usr/local/lib/node_modules/prisma
 
 # Copy Prisma schema and migrations for runtime
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
