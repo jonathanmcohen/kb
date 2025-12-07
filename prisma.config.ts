@@ -1,5 +1,3 @@
-import { defineConfig } from "prisma/config";
-
 // CI builds may not provide DATABASE_URL; fall back to a local default there so
 // the config can still be loaded. Non-CI environments must supply it.
 const databaseUrl =
@@ -10,7 +8,7 @@ if (!databaseUrl) {
     throw new Error("DATABASE_URL environment variable is not set.");
 }
 
-export default defineConfig({
+const config = {
     schema: "prisma/schema.prisma",
     migrations: {
         path: "prisma/migrations",
@@ -18,4 +16,6 @@ export default defineConfig({
     datasource: {
         url: databaseUrl,
     },
-});
+};
+
+export default config;
