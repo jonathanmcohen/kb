@@ -7,7 +7,11 @@ const globalForPrisma = globalThis as unknown as {
     prismaAdapter: PrismaPg | undefined;
 };
 
-const connectionString = process.env.DATABASE_URL;
+// Allow CI builds to proceed without an explicit DATABASE_URL by using a
+// local default; non-CI environments must set DATABASE_URL.
+const connectionString =
+    process.env.DATABASE_URL ??
+    (process.env.CI ? "postgresql://postgres:password@localhost:5432/kb?schema=public" : undefined);
 
 if (!connectionString) {
     throw new Error("DATABASE_URL environment variable is not set.");
